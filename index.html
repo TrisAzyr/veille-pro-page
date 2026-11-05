@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0F1024">
+<title>Veille</title>
+
+<!-- =================================================================
+     CONFIGURATION — la seule partie à modifier
+     supabaseKey = clé PUBLIQUE (publishable / anon). Jamais la clé secrète.
+     Pour ajouter une veille : copier un bloc { ... } dans la liste.
+     ================================================================= -->
+<script>
+window.VEILLE_CONFIG = {
+  veilles: [
+    {
+      id: 'pro',
+      nom: 'Veille Pro',
+      sousTitre: 'Actualités et aides du cabinet',
+      supabaseUrl: 'https://knmgodvpxkirynavofon.supabase.co',
+      supabaseKey: 'sb_publishable_rCSDxEKxFI22mJfDc74rnQ_mzdEuiuo'
+    }
+    // , { id: 'perso', nom: 'Veille Perso', sousTitre: 'Mes centres d’intérêt',
+    //     supabaseUrl: 'https://AUTRE-PROJET.supabase.co', supabaseKey: 'sb_publishable_...' }
+  ],
+  joursAvantPurge: 30,          // doit correspondre à la purge définie dans schema.sql
+  alerteVerificationJours: 8,   // aide non vérifiée depuis X jours => alerte
+  alerteClotureJours: 15,       // clôture dans moins de X jours => alerte
+  alerteCollecteHeures: 30      // pas de collecte depuis X heures => alerte (collecte quotidienne)
+};
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+/* Design « D · Nuit violette » */
+:root{
+  --bg:#0F1024; --panel:#17182F; --card:#1E1F3A; --card-2:#24254A; --border:#2A2B4A;
+  --text:#ECEBFA; --muted:#A9A8C7; --nav-text:#CFCDE6;
+  --accent:#7C5CFF; --accent-soft:#B9A8FF;
+  --ok:#4ADE80; --ok-f:rgba(74,222,128,.12); --warn:#FBBF24; --warn-f:rgba(251,191,36,.12);
+  --ko:#FB7185; --ko-f:rgba(251,113,133,.12); --info:#7DD3FC; --info-f:rgba(125,211,252,.12);
+  --radius-lg:18px; --radius-md:14px; --radius-sm:12px;
+  --font:"Plus Jakarta Sans","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.5}
+a{color:var(--accent-soft)} a:hover{color:#D9CFFF}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+input,select,textarea{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px;max-width:100%;color:var(--text)}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:-1px}
+input[type=date]{color-scheme:dark}
+input[type=checkbox]{accent-color:var(--accent);width:16px;height:16px;vertical-align:-3px}
+textarea{width:100%;min-height:80px;resize:vertical}
+svg{flex:none}
+
+.page{min-height:100vh;padding:24px;padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(safe-area-inset-bottom))}
+.wrap{max-width:1220px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+
+/* En-tête */
+.header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;padding:8px 4px}
+.brand{display:flex;align-items:center;gap:16px;min-width:0}
+.brand-text{display:flex;flex-direction:column;gap:2px;min-width:0}
+.brand-title{font-size:26px;font-weight:700;letter-spacing:-.01em}
+.brand-sub{font-size:15px;color:var(--muted)}
+.brand-sub.alerte{color:var(--warn);font-weight:600}
+.actions{display:flex;align-items:center;gap:6px;position:relative}
+.icon-btn{width:44px;height:44px;border-radius:var(--radius-sm);border:0;background:transparent;color:var(--text);display:flex;align-items:center;justify-content:center;position:relative}
+.icon-btn:hover{background:var(--card)}
+.icon-btn.petit{width:36px;height:36px}
+.icon-btn .pastille{position:absolute;top:6px;right:6px;min-width:17px;height:17px;border-radius:9px;background:var(--ko);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 4px}
+.avatar{width:44px;height:44px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-weight:700;font-size:16px;margin-left:6px}
+.menu{position:absolute;right:0;top:52px;z-index:10;background:var(--panel);border:1px solid var(--border);border-radius:var(--radius-md);padding:8px;min-width:230px;box-shadow:0 12px 40px rgba(0,0,0,.45);display:flex;flex-direction:column;gap:4px}
+.menu .info{font-size:13px;color:var(--muted);padding:6px 10px}
+.menu button{background:transparent;border:0;border-radius:10px;text-align:left;padding:10px;color:var(--nav-text)}
+.menu button:hover{background:var(--card)}
+.menu button.actif{color:var(--accent-soft);font-weight:600}
+.menu.alertes{width:min(360px,calc(100vw - 32px));gap:8px}
+.alerte-item{display:flex;flex-direction:column;gap:4px;background:var(--card);border:1px solid var(--border);border-left:4px solid var(--warn);border-radius:10px;padding:10px 12px}
+.alerte-item.erreur,.alerte-item.retard{border-left-color:var(--ko)}
+.alerte-item b{font-size:14px}
+.ech-liste{display:flex;flex-direction:column;gap:8px}
+.ech{display:grid;grid-template-columns:62px 1fr auto;gap:12px;align-items:center;background:var(--card);border:1px solid var(--border);border-left:5px solid var(--ok);border-radius:var(--radius-md);padding:10px 14px 10px 10px}
+.ech.proche{border-left-color:var(--warn)} .ech.urgente{border-left-color:var(--ko);background:color-mix(in srgb,var(--ko) 9%,var(--card))}
+.ech-date{display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--card-2);border-radius:12px;padding:6px 0;line-height:1.05}
+.ech-jour{font-size:24px;font-weight:800}
+.ech-mois{font-size:12px;font-weight:700;text-transform:uppercase;color:var(--accent-soft)}
+.ech-sem{font-size:11px;color:var(--muted)}
+.ech-corps{display:flex;flex-direction:column;gap:3px;min-width:0}
+.ech-titre{font-size:15px;font-weight:600;line-height:1.3}
+.ech-titre a,.lien-titre{color:var(--text);text-decoration:none;background:none;border:0;padding:0;font:inherit;text-align:left;cursor:pointer}
+.ech-titre a:hover,.lien-titre:hover{color:var(--accent-soft);text-decoration:underline}
+.ech-sous{font-size:13px;color:var(--muted)}
+.ech-tags{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12px}
+.ech-j{font-size:15px;font-weight:800;white-space:nowrap;color:var(--ok)}
+.ech.proche .ech-j{color:var(--warn)} .ech.urgente .ech-j{color:var(--ko)}
+.ech-groupe{margin:8px 0 0;font-size:14px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+@media (max-width:760px){ .ech{grid-template-columns:52px 1fr;padding:10px} .ech-j{grid-column:2;font-size:13px} .ech-jour{font-size:20px} }
+.resume-matin{white-space:pre-wrap;max-height:16em;overflow:auto}
+.alerte-detail{font-size:13px;color:var(--muted);white-space:pre-wrap;max-height:9em;overflow:auto}
+.alerte-item button{align-self:flex-start;padding:4px 0;color:var(--accent-soft);font-weight:600}
+.icon-btn.cloche-erreur{color:var(--ko)}
+
+/* Mise en page */
+.layout{display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start}
+
+/* Navigation */
+.nav{flex:1 1 230px;max-width:100%;background:var(--panel);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px 14px;display:flex;flex-direction:column;gap:4px;position:sticky;top:16px}
+.nav-title{font-size:13px;font-weight:700;padding:12px 8px 6px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.nav-title:first-child{padding-top:0}
+.cat{min-height:44px;border-radius:var(--radius-sm);border:0;padding:0 12px;display:flex;align-items:center;gap:12px;font-size:15px;text-align:left;background:transparent;color:var(--nav-text);font-weight:500}
+.cat:hover{background:var(--card)}
+.cat.is-active{background:var(--accent);color:#fff;font-weight:600}
+.cat .lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cat .nb{font-size:12px;font-weight:700;background:var(--card-2);color:var(--accent-soft);border-radius:999px;padding:1px 8px}
+.cat.is-active .nb{background:rgba(255,255,255,.22);color:#fff}
+.cat .nb.urgent{background:var(--ko);color:#fff}
+.reset{margin-top:14px;height:44px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--card);color:var(--text);font-size:14px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:8px}
+
+/* Contenu */
+.main{flex:999 1 560px;min-width:0;background:var(--panel);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;display:flex;flex-direction:column;gap:12px}
+.list-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 8px 2px;flex-wrap:wrap}
+.list-title{font-size:15px;font-weight:600}
+.list-count{font-size:13px;color:var(--muted)}
+.outils{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:0 4px}
+.outils input[type=search]{flex:1;min-width:180px}
+.puce{border:1px solid var(--border);background:var(--card);color:var(--nav-text);border-radius:999px;padding:6px 14px;font-size:13px;font-weight:500}
+.puce:hover{border-color:var(--accent)}
+.puce.is-active{background:var(--accent);border-color:var(--accent);color:#fff}
+.lien-btn{background:none;border:0;color:var(--accent-soft);font-size:13px;padding:6px}
+.check{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.bandeau{border-radius:var(--radius-md);padding:10px 14px;font-size:14px;font-weight:600}
+.bandeau.demo{background:var(--warn-f);color:var(--warn)}
+.bandeau.erreur{background:var(--ko-f);color:var(--ko)}
+.empty{padding:48px 16px;text-align:center;color:var(--muted);font-size:15px}
+
+/* Carte article */
+.article{display:flex;flex-direction:column;gap:10px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-md);padding:16px 14px 14px 20px}
+.article.is-read .article-title{color:var(--nav-text);font-weight:600}
+.article-row{display:flex;gap:18px;align-items:stretch}
+.article-body{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:6px;padding-top:2px}
+.article-title{font-size:18px;font-weight:700;line-height:1.3;color:var(--text);text-decoration:none}
+.article-title:hover{color:#D9CFFF}
+.article-summary{margin:0;font-size:14px;line-height:1.5;color:var(--muted)}
+.article-cat{font-size:12px;font-weight:600;color:var(--accent-soft);display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center}
+.article-cat .doux{color:var(--muted);font-weight:500}
+.article-side{flex:none;display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;gap:8px}
+.article-meta{display:flex;align-items:center;gap:10px}
+.article-when{font-size:13px;color:var(--muted);white-space:nowrap}
+.dot{width:9px;height:9px;border-radius:50%;background:transparent}
+.dot.is-unread{background:var(--accent)}
+.side-btns{display:flex;gap:2px}
+.save.is-saved{color:var(--accent-soft)}
+.save.is-saved svg{fill:currentColor}
+.note{font-size:13px;color:var(--nav-text);background:var(--card-2);border-radius:10px;padding:8px 10px;white-space:pre-wrap}
+.panneau{border-top:1px solid var(--border);padding-top:12px;display:flex;flex-direction:column;gap:10px}
+.panneau .ligne{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{border:1px solid var(--border);background:var(--card-2);color:var(--text);border-radius:10px;padding:8px 14px;font-size:14px;font-weight:500}
+.btn:hover{border-color:var(--accent)}
+.btn.primaire{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.danger{color:var(--ko)}
+.btn.danger:hover{border-color:var(--ko)}
+.badge{display:inline-block;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:700;background:var(--card-2);color:var(--muted)}
+.b-ok{background:var(--ok-f);color:var(--ok)} .b-warn{background:var(--warn-f);color:var(--warn)}
+.b-ko{background:var(--ko-f);color:var(--ko)} .b-info{background:var(--info-f);color:var(--info)}
+.b-accent{background:rgba(124,92,255,.18);color:var(--accent-soft)}
+.etoiles{color:var(--warn);letter-spacing:-1px}
+
+/* Aides */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px 16px}
+.stat b{font-size:28px;font-weight:700;display:block;line-height:1.1}
+.stat span{font-size:13px;color:var(--muted)}
+.cal-wrap{position:relative;max-width:100%;overflow-x:auto;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-md)}
+.cal{border-collapse:collapse;width:100%;min-width:560px;font-size:13px}
+.cal th,.cal td{border-bottom:1px solid var(--border);padding:0;height:34px;text-align:center}
+.cal thead th{color:var(--muted);font-weight:700;padding:8px 2px}
+.cal tbody th{text-align:left;font-weight:500;padding:0 10px;white-space:nowrap;color:var(--text)}
+.cal td{min-width:28px;border-left:1px solid var(--border)}
+.cal td.s{background:color-mix(in srgb,var(--ok) 55%,transparent)}
+.cal td.r{background:color-mix(in srgb,var(--warn) 60%,transparent)}
+.cal td.sr{background:linear-gradient(135deg,color-mix(in srgb,var(--ok) 55%,transparent) 50%,color-mix(in srgb,var(--warn) 60%,transparent) 50%)}
+.cal .now{box-shadow:inset 2px 0 0 var(--accent),inset -2px 0 0 var(--accent)}
+.cal thead th.now{color:var(--accent-soft)}
+.cal tbody tr:last-child th,.cal tbody tr:last-child td{border-bottom:0}
+.cal-legende{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:var(--muted)}
+.cal-legende span{display:flex;align-items:center;gap:6px}
+.cal-legende i{display:inline-block;width:14px;height:14px;border-radius:4px}
+.cal-legende i.s{background:color-mix(in srgb,var(--ok) 55%,transparent)}
+.cal-legende i.r{background:color-mix(in srgb,var(--warn) 60%,transparent)}
+.cal-legende i.now-l{border:2px solid var(--accent)}
+.periodes{display:flex;flex-direction:column;gap:8px}
+.periode{display:grid;grid-template-columns:1fr auto;gap:2px 12px;background:var(--panel);border:1px solid var(--border);border-left:4px solid var(--border);border-radius:10px;padding:9px 12px}
+.periode.ouverte{border-left-color:var(--ok)} .periode.urgente{border-left-color:var(--ko)}
+.periode.a_venir{border-left-color:var(--info)} .periode.cloturee{opacity:.6}
+.periode .lib{font-weight:700}
+.periode .jours{font-weight:700;font-size:13px;text-align:right;white-space:nowrap}
+.periode .dates{font-size:13px;color:var(--muted);grid-column:1/-1}
+.periode .dates b{color:var(--text)}
+details>summary{cursor:pointer;color:var(--accent-soft);font-size:14px;font-weight:600;list-style:none;display:flex;align-items:center;gap:6px}
+details>summary::-webkit-details-marker{display:none}
+details>summary::before{content:'›';display:inline-block;transition:transform .15s;font-size:18px;line-height:1}
+details[open]>summary::before{transform:rotate(90deg)}
+.details-corps{display:flex;flex-direction:column;gap:12px;padding-top:12px}
+dl{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0;font-size:14px}
+dt{color:var(--muted)} dd{margin:0;white-space:pre-wrap}
+.sous-titre{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:0}
+.historique{font-size:13px;color:var(--muted);margin:0;padding-left:18px}
+.pre{white-space:pre-wrap}
+
+/* Connexion */
+.connexion{max-width:400px;margin:10vh auto 0;background:var(--panel);border:1px solid var(--border);border-radius:var(--radius-lg);padding:28px;display:flex;flex-direction:column;gap:12px}
+.connexion .brand{margin-bottom:8px}
+.connexion input,.connexion select{width:100%}
+.connexion .btn{width:100%;height:46px}
+.erreur{color:var(--ko);font-size:14px}
+
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--accent);color:#fff;
+  padding:10px 18px;border-radius:999px;font-size:14px;font-weight:600;z-index:30;opacity:0;transition:opacity .2s;pointer-events:none;box-shadow:0 8px 30px rgba(0,0,0,.4)}
+.toast.vu{opacity:1}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* Mobile : la navigation devient une bande défilante */
+@media (max-width:760px){
+  .page{padding:14px}
+  .wrap{gap:14px}
+  .header{flex-wrap:nowrap;gap:8px;padding:4px 0}
+  .brand{gap:10px}
+  .brand-title{font-size:18px;white-space:nowrap} .brand-sub{font-size:12px}
+  .brand svg{width:32px;height:32px}
+  .actions{gap:0}
+  .icon-btn{width:38px;height:38px}
+  .avatar{width:36px;height:36px;font-size:14px;margin-left:4px}
+  .nav{position:sticky;top:0;z-index:5;flex-direction:row;overflow-x:auto;padding:8px;gap:6px;border-radius:var(--radius-md);scrollbar-width:none;flex-basis:100%}
+  .nav::-webkit-scrollbar{display:none}
+  .nav-title,.reset{display:none}
+  .cat{flex:none;min-height:40px;padding:0 12px;gap:8px;font-size:14px}
+  .cat .lbl{overflow:visible}
+  .main{padding:10px;border-radius:var(--radius-md)}
+  .article{padding:14px}
+  .article-row{gap:10px}
+  .article-title{font-size:16px}
+  .stats{grid-template-columns:repeat(3,1fr);gap:8px}
+  .stat{padding:10px}
+  .stat b{font-size:22px}
+  .stat span{font-size:12px}
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast" class="toast" role="status"></div>
+
+<script>
+(() => {
+'use strict';
+const CFG = window.VEILLE_CONFIG;
+const DEMO = new URLSearchParams(location.search).has('demo');
+
+// ------------------------------------------------------------------ stockage tolérant
+const memoire = {};
+const stock = (() => { try { const k = '__t'; localStorage.setItem(k, k); localStorage.removeItem(k); return localStorage; } catch { return null; } })();
+const store = {
+  getItem: k => stock ? stock.getItem(k) : (k in memoire ? memoire[k] : null),
+  setItem: (k, v) => { if (stock) stock.setItem(k, v); else memoire[k] = String(v); },
+  removeItem: k => { if (stock) stock.removeItem(k); else delete memoire[k]; }
+};
+
+// ------------------------------------------------------------------ icônes (SVG inline)
+const I = (d, w = 20, extra = '') => `<svg width="${w}" height="${w}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" ${extra}>${d}</svg>`;
+const ICO = {
+  logo: `<svg width="44" height="44" viewBox="0 0 44 44" role="img" aria-label="Logo Veille"><path d="M22 4 40 40H30L22 22 14 40H4Z" fill="var(--accent)"/><path d="M22 22 30 40H14Z" fill="var(--accent-soft)"/></svg>`,
+  search: I('<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>', 22, 'stroke-width="2"'),
+  bell: I('<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/>', 22, 'stroke-width="2"'),
+  refresh: I('<path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/>', 22, 'stroke-width="2"'),
+  grid: I('<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>'),
+  aide: I('<path d="M3 21h18"/><path d="M6 17v-4M11 17V9M16 17v-6"/><path d="M4 9l6-5 4 3 6-4"/>'),
+  theme: I('<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/>'),
+  bookmark: I('<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>'),
+  sliders: I('<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/>'),
+  journal: I('<path d="M10 3l1.8 5.2L17 10l-5.2 1.8L10 17l-1.8-5.2L3 10l5.2-1.8z"/><path d="M18 14l.9 2.1L21 17l-2.1.9L18 20l-.9-2.1L15 17l2.1-.9z"/>'),
+  reset: I('<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>', 16, 'stroke-width="2"'),
+  more: I('<circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/>', 20, 'stroke-width="2.4"'),
+  trash: I('<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>', 16),
+  clock: I('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'),
+  home: I('<path d="M3 11 12 3l9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/>'),
+  calendar: I('<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/><path d="M8 14c1.5-2 3-2 4 0s2.5 2 4 0"/>')
+};
+
+// ------------------------------------------------------------------ calendrier des cultures (repères fixes)
+// Repères indicatifs pour la plaine de Bourgogne-Franche-Comté / Haute-Saône.
+// s = semis (ou plantation), r = récolte (ou fauche, vendange). Mois de 1 à 12.
+const CULTURES = [
+  { nom: 'Blé tendre d’hiver', s: [10, 11], r: [7], note: 'Semis optimal mi-octobre en plaine ; moisson de début à fin juillet.' },
+  { nom: 'Orge d’hiver', s: [9, 10], r: [6, 7], note: 'Semée avant le blé ; première céréale moissonnée (fin juin à mi-juillet).' },
+  { nom: 'Orge de printemps', s: [2, 3], r: [7], note: 'Semis dès que les sols se ressuient en fin d’hiver.' },
+  { nom: 'Colza', s: [8, 9], r: [7], note: 'Levée à sécuriser avant l’automne : sensible au sec de fin d’été.' },
+  { nom: 'Maïs grain', s: [4, 5], r: [10, 11], note: 'Récolte selon l’humidité du grain (frais de séchage).' },
+  { nom: 'Maïs ensilage', s: [4, 5], r: [9], note: 'Ensilage dès 32-35 % de matière sèche.' },
+  { nom: 'Soja', s: [5], r: [9, 10], note: 'Semis en sol réchauffé (mai) ; récolte fin septembre-octobre.' },
+  { nom: 'Tournesol', s: [4, 5], r: [9], note: 'Culture d’été peu gourmande en eau.' },
+  { nom: 'Prairies (fauches)', s: [], r: [5, 6, 8, 9], note: 'Ensilage ou enrubannage en mai, foin en juin, regains en fin d’été selon la pousse.' },
+  { nom: 'Vigne (vendanges)', s: [], r: [9], note: 'Vendanges en septembre, parfois dès fin août ou jusqu’à début octobre.' }
+];
+const MOIS_COURTS = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
+const MOIS_LONGS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+
+// ------------------------------------------------------------------ utilitaires
+const $app = document.getElementById('app');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const urlSure = u => /^https?:\/\//i.test(u || '') ? esc(u) : '#';
+const pad = n => String(n).padStart(2, '0');
+const isoLocal = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const auj = () => isoLocal(new Date());
+const parseD = s => { const [y,m,d] = String(s).slice(0,10).split('-').map(Number); return new Date(y, m-1, d); };
+const fr = s => s ? parseD(s).toLocaleDateString('fr-FR') : '—';
+const frCourt = s => parseD(s).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+const joursJusqua = s => Math.round((parseD(s) - parseD(auj())) / 86400000);
+const ilYa = ts => {
+  if (!ts) return 'jamais';
+  const m = (Date.now() - new Date(ts)) / 60000;
+  if (m < 60) return `il y a ${Math.max(1, Math.round(m))} min`;
+  if (m < 36 * 60) return `il y a ${Math.round(m / 60)} h`;
+  return `il y a ${Math.round(m / 1440)} j`;
+};
+const maj1 = s => s.charAt(0).toUpperCase() + s.slice(1);
+const ajouterJours = (ts, n) => { const d = new Date(ts); d.setDate(d.getDate() + n); return isoLocal(d); };
+const norm = s => String(s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+const pluriel = (n, s, p) => `${n} ${n > 1 ? p : s}`;
+let toastT;
+function toast(msg){ const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('vu'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('vu'), 2200); }
+
+// ------------------------------------------------------------------ état
+// vue : 'aides' | 'actus' | 'conservees' | 'themes' | 'journal'  ;  f.theme : id de thème (vue actus)
+const S = {
+  veille: null, sb: null, api: null, user: null, alertes: false,
+  vue: 'accueil',
+  data: { themes: [], articles: [], aides: [], journal: [] },
+  f: { q: '', theme: '', nonLus: false, aides: 'actives' },
+  recherche: false, menu: false,
+  ouverts: new Set(),
+  chargement: false, erreur: ''
+};
+
+// ------------------------------------------------------------------ accès aux données
+function apiSupabase(sb, vid){
+  const chk = r => { if (r.error) throw r.error; return r.data; };
+  return {
+    async charger(){
+      const [th, ar, ai, jo] = await Promise.all([
+        sb.from('themes').select('*').eq('veille_id', vid).order('ordre').order('nom'),
+        sb.from('articles').select('*').eq('veille_id', vid).order('created_at', { ascending: false }).limit(1500),
+        sb.from('aides').select('*, aides_periodes(*), aides_historique(*)').eq('veille_id', vid).order('nom'),
+        sb.from('journal_collecte').select('*').eq('veille_id', vid).order('debut', { ascending: false }).limit(20)
+      ]);
+      return { themes: chk(th), articles: chk(ar), aides: chk(ai), journal: chk(jo) };
+    },
+    majArticle: async (id, p) => chk(await sb.from('articles').update(p).eq('id', id)),
+    supprimerArticle: async id => chk(await sb.from('articles').delete().eq('id', id)),
+    majAide: async (id, p) => chk(await sb.from('aides').update(p).eq('id', id)),
+    sauverTheme: async t => t.id
+      ? chk(await sb.from('themes').update({ nom: t.nom, consignes: t.consignes, actif: t.actif }).eq('id', t.id))
+      : chk(await sb.from('themes').insert({ veille_id: vid, nom: t.nom, consignes: t.consignes, actif: true })),
+    supprimerTheme: async id => chk(await sb.from('themes').delete().eq('id', id))
+  };
+}
+
+function apiDemo(){
+  const j = n => { const d = new Date(); d.setDate(d.getDate() + n); return isoLocal(d); };
+  const ts = n => new Date(Date.now() + n * 86400000).toISOString();
+  const moisLib = n => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() + n); return maj1(d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })); };
+  const D = {
+    themes: [
+      { id: 't1', nom: 'Fiscalité', consignes: 'Exemple : lois de finances, BOFiP, échéances déclaratives.', actif: true },
+      { id: 't2', nom: 'Social TNS', consignes: 'Exemple : appels de cotisations URSSAF et MSA des indépendants.', actif: true },
+      { id: 't3', nom: 'Agriculture', consignes: 'Exemple : PAC, MSA, aides aux exploitations.', actif: true }
+    ],
+    articles: [
+      { id: 'a1', theme_id: 't1', titre: '[Exemple fictif] Nouvelle échéance déclarative pour les entreprises', resume: "Résumé d'exemple : ce qui change, pour qui et à partir de quand. Les vraies actus seront rédigées par l'IA.", url: 'https://example.com/1', source: 'Site exemple', date_publication: j(0), date_fin: j(40), conserver: false, lu: false, importance: 3, tags: ['échéance'], created_at: new Date(Date.now() - 25 * 60000).toISOString() },
+      { id: 'a2', theme_id: 't2', titre: '[Exemple fictif] Revalorisation d’un barème social', resume: 'Résumé d’exemple sur 3 à 5 phrases.', url: 'https://example.com/2', source: 'Site exemple', date_publication: j(-3), date_fin: null, conserver: true, lu: true, importance: 2, tags: [], notes: 'Penser à prévenir les clients concernés.', created_at: ts(-3) },
+      { id: 'a3', theme_id: 't3', titre: '[Exemple fictif] Annonce concernant les exploitations agricoles', resume: 'Résumé d’exemple.', url: 'https://example.com/3', source: 'Site exemple', date_publication: j(-25), date_fin: null, conserver: false, lu: false, importance: 1, tags: ['PAC'], created_at: ts(-25) }
+    ],
+    aides: [
+      { id: 'g1', slug: 'gnr-agricole', nom: '[Exemple fictif] Remboursement accise GNR agricole', organisme: 'Organisme exemple', statut: 'ouverte', description: "Données d'exemple pour montrer l'affichage. Les vraies informations seront vérifiées par l'IA sur les sources officielles.", beneficiaires: 'Exploitants agricoles (exemple)', montant: 'Taux par hectolitre selon la période (exemple)', lien_officiel: 'https://example.com', lien_demarche: 'https://example.com', suivre: true, verifie_le: ts(-1), tags: ['agriculture'], sources_verification: ['https://example.com'], notes: '',
+        aides_periodes: [
+          { id: 'p0', libelle: moisLib(-4), depot_ouverture: j(-100), depot_cloture: j(-5), taux: 'x,xx €/hl' },
+          { id: 'p1', libelle: moisLib(-2), periode_debut: j(-60), periode_fin: j(-31), depot_ouverture: j(-25), depot_cloture: j(10), taux: 'x,xx €/hl' },
+          { id: 'p2', libelle: moisLib(-1), periode_debut: j(-30), periode_fin: j(-1), depot_ouverture: j(-2), depot_cloture: j(56), taux: 'x,xx €/hl' },
+          { id: 'p3', libelle: moisLib(0), periode_debut: j(0), periode_fin: j(29), depot_ouverture: j(30), depot_cloture: j(90), taux: 'à confirmer' }
+        ],
+        aides_historique: [ { id: 1, date: ts(-2), changement: 'Ouverture d’une nouvelle période (exemple)', source: 'https://example.com' } ] },
+      { id: 'g2', slug: 'aide-exemple', nom: '[Exemple fictif] Appel à projets régional', organisme: 'Région (exemple)', statut: 'a_venir', description: 'Aide d’exemple non encore ouverte.', suivre: true, verifie_le: ts(-12), tags: [], sources_verification: [], aides_periodes: [ { id: 'p4', libelle: 'Session 1', depot_ouverture: j(20), depot_cloture: j(80) } ], aides_historique: [] }
+    ],
+    journal: [ { id: 1, debut: ts(-1), resume: 'Exemple de compte rendu de collecte.', nb_articles: 3, nb_aides: 2, suggestions: '- Exemple : ajouter un thème « Juridique ».\n- Exemple : suivre le site de la chambre d’agriculture.', erreurs: 'Exemple : le flux RSS de la Douane n’a pas répondu (HTTP 503).' } ]
+  };
+  const trouve = (l, id) => l.find(x => x.id === id);
+  return {
+    async charger(){ return structuredClone(D); },
+    async majArticle(id, p){ Object.assign(trouve(D.articles, id), p); },
+    async supprimerArticle(id){ D.articles = D.articles.filter(a => a.id !== id); },
+    async majAide(id, p){ Object.assign(trouve(D.aides, id), p); },
+    async sauverTheme(t){ if (t.id) Object.assign(trouve(D.themes, t.id), t); else D.themes.push({ ...t, id: 't' + Date.now(), actif: true }); },
+    async supprimerTheme(id){ D.themes = D.themes.filter(t => t.id !== id); }
+  };
+}
+
+// ------------------------------------------------------------------ logique aides
+function statutPeriode(p){
+  const t = auj();
+  if (p.depot_cloture && p.depot_cloture < t) return 'cloturee';
+  if (p.depot_ouverture && p.depot_ouverture > t) return 'a_venir';
+  if (p.depot_ouverture || p.depot_cloture) return 'ouverte';
+  return 'inconnue';
+}
+function statutAide(a){
+  if (a.statut === 'suspendue') return 'suspendue';
+  const st = (a.aides_periodes || []).map(statutPeriode);
+  if (st.includes('ouverte')) return 'ouverte';
+  if (st.includes('a_venir')) return 'a_venir';
+  if (st.length && st.every(s => s === 'cloturee')) return 'fermee';
+  return a.statut || 'inconnue';
+}
+const LIB_STATUT = { ouverte: ['Ouverte','b-ok'], a_venir: ['À venir','b-info'], fermee: ['Clôturée',''], suspendue: ['Suspendue','b-ko'], inconnue: ['À vérifier','b-warn'] };
+function prochaineCloture(a){
+  const c = (a.aides_periodes || []).filter(p => statutPeriode(p) === 'ouverte' && p.depot_cloture).map(p => p.depot_cloture).sort();
+  return c[0] || null;
+}
+const periodesOuvertes = () => S.data.aides.flatMap(a => (a.aides_periodes || []).filter(p => statutPeriode(p) === 'ouverte'));
+const periodesUrgentes = () => periodesOuvertes().filter(p => p.depot_cloture && joursJusqua(p.depot_cloture) <= CFG.alerteClotureJours);
+const aideAncienne = a => !a.verifie_le || (Date.now() - new Date(a.verifie_le)) > CFG.alerteVerificationJours * 86400000;
+
+// ------------------------------------------------------------------ alertes (cloche)
+// Erreur signalée par la dernière collecte (non encore vue), collecte manquante, clôtures proches.
+function alertes(){
+  const j = S.data.journal[0], liste = [];
+  const erreur = j && String(j.erreurs || '').trim();
+  if (erreur) liste.push({ cle: 'erreur', nouvelle: String(j.id) !== store.getItem('veille.erreurVue'),
+    titre: 'Erreur signalée par la dernière collecte', detail: `${ilYa(j.debut)} — ${erreur}`, action: 'journal', bouton: 'Voir le journal de l’IA' });
+  if (!j || (Date.now() - new Date(j.debut)) > CFG.alerteCollecteHeures * 3600000)
+    liste.push({ cle: 'retard', nouvelle: true, titre: 'La collecte quotidienne n’a pas tourné',
+      detail: j ? `Dernière collecte ${ilYa(j.debut)}. Vérifier la tâche planifiée « Veille pro quotidienne ».` : 'Aucune collecte enregistrée.', action: 'journal', bouton: 'Voir le journal de l’IA' });
+  const urg = periodesUrgentes();
+  if (urg.length) liste.push({ cle: 'cloture', nouvelle: true, titre: `${pluriel(urg.length, 'période d’aide clôture', 'périodes d’aide clôturent')} dans ${CFG.alerteClotureJours} jours ou moins`,
+    detail: S.data.aides.flatMap(a => (a.aides_periodes || []).filter(p => urg.includes(p)).map(p => `${a.nom} — ${p.libelle} : ${fr(p.depot_cloture)}`)).slice(0, 4).join('\n'), action: 'aides', bouton: 'Voir les aides' });
+  return liste;
+}
+const nbAlertes = () => alertes().reduce((n, a) => n + (a.nouvelle ? (a.cle === 'cloture' ? periodesUrgentes().length : 1) : 0), 0);
+function renderAlertes(){
+  const l = alertes();
+  return `<div class="menu alertes" role="dialog" aria-label="Notifications">
+    ${l.length ? l.map(a => `<div class="alerte-item ${a.cle}">
+      <b>${a.cle === 'cloture' ? '' : '⚠ '}${esc(a.titre)}</b>
+      <span class="alerte-detail">${esc(a.detail)}</span>
+      <button type="button" data-action="alerte-ouvrir" data-v="${a.action}">${esc(a.bouton)} →</button>
+    </div>`).join('') : '<span class="info">Aucune notification : la dernière collecte s’est bien passée.</span>'}
+  </div>`;
+}
+
+// ------------------------------------------------------------------ rendu général
+function render(){
+  if (!S.user) return renderConnexion();
+  const v = S.veille, d = S.data;
+  const derniere = d.journal[0]?.debut;
+  const vieille = !derniere || (Date.now() - new Date(derniere)) > CFG.alerteVerificationJours * 86400000;
+  const nbNotif = nbAlertes(), erreurNouvelle = alertes().some(a => a.cle !== 'cloture' && a.nouvelle);
+  const initiale = (S.user.email || '?').charAt(0).toUpperCase();
+
+  $app.innerHTML = `<div class="page"><div class="wrap">
+    <header class="header">
+      <div class="brand">${ICO.logo}
+        <div class="brand-text">
+          <span class="brand-title">${esc(v.nom)}</span>
+          <span class="brand-sub ${vieille ? 'alerte' : ''}">${vieille ? '⚠ ' : ''}Dernière collecte IA ${esc(ilYa(derniere))}</span>
+        </div>
+      </div>
+      <div class="actions">
+        <button type="button" class="icon-btn" data-action="recherche" aria-label="Rechercher">${ICO.search}</button>
+        <button type="button" class="icon-btn ${erreurNouvelle ? 'cloche-erreur' : ''}" data-action="alertes" aria-label="Notifications${nbNotif ? ` (${nbNotif})` : ''}" aria-expanded="${S.alertes}">${ICO.bell}${nbNotif ? `<span class="pastille">${erreurNouvelle ? '!' : nbNotif}</span>` : ''}</button>
+        ${S.alertes ? renderAlertes() : ''}
+        <button type="button" class="icon-btn" data-action="rafraichir" aria-label="Recharger">${ICO.refresh}</button>
+        <button type="button" class="avatar" data-action="menu" aria-label="Mon compte" aria-expanded="${S.menu}">${esc(initiale)}</button>
+        ${S.menu ? `<div class="menu">
+          <span class="info">${esc(S.user.email)}</span>
+          ${CFG.veilles.length > 1 ? CFG.veilles.map(x => `<button data-action="veille" data-v="${esc(x.id)}" class="${x.id === v.id ? 'actif' : ''}">${esc(x.nom)}</button>`).join('') : ''}
+          ${DEMO ? '<button data-action="quitter-demo">Quitter la démonstration</button>' : '<button data-action="deconnexion">Se déconnecter</button>'}
+        </div>` : ''}
+      </div>
+    </header>
+    <div class="layout">
+      ${renderNav()}
+      <main class="main" id="contenu">${S.chargement ? '<div class="empty">Chargement…</div>' : contenu()}</main>
+    </div>
+  </div></div>`;
+}
+
+function renderNav(){
+  const d = S.data;
+  const nonLus = d.articles.filter(a => !a.lu);
+  const ouvertes = d.aides.filter(a => statutAide(a) === 'ouverte').length;
+  const urgentes = periodesUrgentes().length;
+  const actif = (vue, theme = '') => S.vue === vue && (vue !== 'actus' || S.f.theme === theme) ? 'is-active' : '';
+  const nb = (n, cls = '') => n ? `<span class="nb ${cls}">${n}</span>` : '';
+  const cat = (vue, ico, lbl, n, theme = '') =>
+    `<button type="button" class="cat ${actif(vue, theme)}" data-action="vue" data-v="${vue}" data-theme="${esc(theme)}" aria-pressed="${!!actif(vue, theme)}">${ico}<span class="lbl">${esc(lbl)}</span>${n}</button>`;
+  return `<nav class="nav" aria-label="Navigation">
+    <span class="nav-title">Suivi</span>
+    ${cat('accueil', ICO.home, 'Accueil', nb(nbAlertes(), nbAlertes() ? 'urgent' : ''))}
+    ${cat('aides', ICO.aide, 'Aides', nb(urgentes || ouvertes, urgentes ? 'urgent' : ''))}
+    ${cat('echeances', ICO.clock, 'Échéances', nb(toutesEcheances(7).length, toutesEcheances(7).length ? 'urgent' : ''))}
+    ${cat('cultures', ICO.calendar, 'Calendrier des cultures', '')}
+    <span class="nav-title">Actualités</span>
+    ${cat('actus', ICO.grid, 'Toutes', nb(nonLus.length))}
+    ${d.themes.filter(t => t.actif).map(t => cat('actus', ICO.theme, t.nom, nb(nonLus.filter(a => a.theme_id === t.id).length), t.id)).join('')}
+    ${cat('conservees', ICO.bookmark, 'Conservées', nb(d.articles.filter(a => a.conserver).length))}
+    <span class="nav-title">Réglages</span>
+    ${cat('themes', ICO.sliders, 'Thèmes & consignes', '')}
+    ${cat('journal', ICO.journal, 'Journal de l’IA', '')}
+    <button type="button" class="reset" data-action="reset">${ICO.reset}Réinitialiser</button>
+  </nav>`;
+}
+
+function contenu(){
+  const bandeaux = (DEMO ? '<div class="bandeau demo">Mode démonstration — données fictives, rien n’est enregistré.</div>' : '')
+    + (S.erreur ? `<div class="bandeau erreur">${esc(S.erreur)}</div>` : '');
+  switch (S.vue){
+    case 'actus': return bandeaux + vueArticles(false);
+    case 'conservees': return bandeaux + vueArticles(true);
+    case 'themes': return bandeaux + vueThemes();
+    case 'journal': return bandeaux + vueJournal();
+    case 'cultures': return bandeaux + vueCultures();
+    case 'echeances': return bandeaux + vueEcheances();
+    case 'aides': return bandeaux + vueAides();
+    default: return bandeaux + vueAccueil();
+  }
+}
+function majContenu(){ const c = document.getElementById('contenu'); if (c) c.innerHTML = contenu(); }
+const champRecherche = ph => (S.recherche || S.f.q) ? `<input type="search" placeholder="${ph}" value="${esc(S.f.q)}" data-input="q" aria-label="Rechercher">` : '';
+const tete = (titre, compte) => `<div class="list-head"><span class="list-title">${esc(titre)}</span><span class="list-count">${compte}</span></div>`;
+
+// ------------------------------------------------------------------ échéances fiscales récurrentes
+// (pas d'échéances sociales : le cabinet ne gère ni la paie, ni la DSN, ni les paiements de cotisations TNS)
+// Règles générales (calendrier fiscal impots.gouv.fr) : une date qui tombe un samedi, un dimanche
+// ou un jour férié est reportée au premier jour ouvré suivant. Les dates propres à chaque client
+// (TVA selon le SIREN, exercice décalé, mensualisation…) restent à vérifier dans l'espace professionnel.
+function paques(an){ const a = an % 19, b = Math.floor(an / 100), c = an % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25),
+  g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7,
+  m = Math.floor((a + 11 * h + 22 * l) / 451), mois = Math.floor((h + l - 7 * m + 114) / 31), jour = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(an, mois - 1, jour); }
+function feries(an){ const p = paques(an), plus = n => isoLocal(new Date(p.getFullYear(), p.getMonth(), p.getDate() + n));
+  return new Set([`${an}-01-01`, plus(1), `${an}-05-01`, `${an}-05-08`, plus(39), plus(50), `${an}-07-14`, `${an}-08-15`, `${an}-11-01`, `${an}-11-11`, `${an}-12-25`]); }
+function jourOuvre(an, mois, jour){ const d = new Date(an, mois - 1, jour);
+  while (d.getDay() === 0 || d.getDay() === 6 || feries(d.getFullYear()).has(isoLocal(d))) d.setDate(d.getDate() + 1);
+  return isoLocal(d); }
+const NOM_MOIS = m => MOIS_LONGS[(m + 11) % 12];
+const deMois = m => { const n = NOM_MOIS(m); return /^[aeiou]/i.test(n) ? `d’${n}` : `de ${n}`; };
+function echeancesRecurrentes(jours){
+  const debut = new Date(), fin = new Date(Date.now() + jours * 86400000), out = [];
+  const cal = (an, m) => `https://www.impots.gouv.fr/professionnel/calendrier-fiscal/${an}-${String(m).padStart(2, '0')}`;
+  for (let d = new Date(debut.getFullYear(), debut.getMonth(), 1); d <= fin; d.setMonth(d.getMonth() + 1)){
+    const an = d.getFullYear(), m = d.getMonth() + 1, dePrec = deMois(m - 1), url = cal(an, m);
+    const ajout = (jour, titre, sous, type) => out.push({ date: jourOuvre(an, m, jour), titre, sous, type, url, recurrente: true });
+    ajout(15, `TVA ${dePrec} — régime réel normal`, 'Dépôt et paiement entre le 15 et le 24, à la date de l’espace professionnel', 'Fiscal');
+    ajout(15, `Taxe sur les salaires ${dePrec}`, 'Redevables mensuels (relevé n° 2501)', 'Fiscal');
+    if ([3, 6, 9, 12].includes(m)) ajout(15, 'Acompte d’impôt sur les sociétés', 'Relevé d’acompte n° 2571 (exercice calé sur l’année civile)', 'Fiscal');
+    if (m === 5) ajout(15, 'Solde d’impôt sur les sociétés', 'Exercice clos le 31 décembre (relevé n° 2572)', 'Fiscal');
+    if (m === 6) ajout(15, 'Acompte de CFE', 'Si la CFE de l’an dernier atteint 3 000 € (non mensualisés)', 'Fiscal');
+    if (m === 7 || m === 12) ajout(15, `Acompte de TVA ${deMois(m)} — régime simplifié`, 'Entre le 15 et le 24, à la date de l’espace professionnel', 'Fiscal');
+    if (m === 12) ajout(15, 'Solde de CFE / IFER', 'Paiement en ligne (non mensualisés, sans prélèvement à l’échéance)', 'Fiscal');
+    if (m === 11) ajout(30, 'CFE : adhésion au prélèvement à l’échéance', 'Dernier jour pour opter pour le prélèvement du solde', 'Fiscal');
+    if (m === 12) out.push({ date: `${an}-12-31`, titre: 'Déclaration de CFE n° 1447-C', sous: 'Création d’établissement ou changement d’exploitant dans l’année', type: 'Fiscal', url, recurrente: true });
+  }
+  return out;
+}
+function toutesEcheances(jours){
+  const d = S.data, nomTheme = Object.fromEntries(d.themes.map(t => [t.id, t.nom]));
+  return [
+    ...echeancesRecurrentes(jours),
+    ...d.aides.flatMap(a => (a.aides_periodes || []).filter(p => statutPeriode(p) === 'ouverte' && p.depot_cloture)
+      .map(p => ({ date: p.depot_cloture, titre: a.nom, sous: `${p.libelle} — clôture du dépôt`, type: 'Aide', action: 'aides' }))),
+    ...d.articles.filter(a => a.date_fin)
+      .map(a => ({ date: a.date_fin, titre: a.titre, sous: nomTheme[a.theme_id] || 'Actualité', type: 'Actualité', url: a.url }))
+  ].filter(e => { const n = joursJusqua(e.date); return n >= 0 && n <= jours; })
+   .sort((a, b) => a.date.localeCompare(b.date) || (a.type === 'Aide' ? -1 : 1));
+}
+const COUL_TYPE = { Fiscal: 'b-info', Social: 'b-accent', Aide: 'b-ok', 'Actualité': 'b-warn' };
+function tuileEcheance(e){
+  const n = joursJusqua(e.date), dt = parseD(e.date);
+  const urg = n <= 7 ? 'urgente' : n <= CFG.alerteClotureJours ? 'proche' : '';
+  const titre = e.url ? `<a href="${urlSure(e.url)}" target="_blank" rel="noopener">${esc(e.titre)}</a>`
+    : `<button type="button" class="lien-titre" data-action="vue" data-v="${e.action}">${esc(e.titre)}</button>`;
+  return `<div class="ech ${urg}">
+    <div class="ech-date"><span class="ech-jour">${dt.getDate()}</span><span class="ech-mois">${esc(dt.toLocaleDateString('fr-FR', { month: 'short' }))}</span><span class="ech-sem">${esc(dt.toLocaleDateString('fr-FR', { weekday: 'short' }))}</span></div>
+    <div class="ech-corps"><span class="ech-titre">${titre}</span><span class="ech-sous">${esc(e.sous)}</span>
+      <span class="ech-tags"><span class="badge ${COUL_TYPE[e.type] || ''}">${esc(e.type)}</span>${e.recurrente ? '<span class="doux">règle générale</span>' : ''}</span></div>
+    <div class="ech-j">${n === 0 ? "Aujourd'hui" : n === 1 ? 'Demain' : `J-${n}`}</div>
+  </div>`;
+}
+function vueEcheances(){
+  const jours = S.f.horizon || 60, type = S.f.typeEch || '';
+  const liste = toutesEcheances(jours).filter(e => !type || e.type === type);
+  const parMois = {};
+  liste.forEach(e => { const k = e.date.slice(0, 7); (parMois[k] = parMois[k] || []).push(e); });
+  const semaine = liste.filter(e => joursJusqua(e.date) <= 7).length;
+  const puce = (act, k, v, l) => `<button type="button" class="puce ${String(v) === String(k) ? 'is-active' : ''}" data-action="${act}" data-v="${k}">${l}</button>`;
+  return `${tete('Échéances', pluriel(liste.length, 'échéance', 'échéances'))}
+    <div class="stats">
+      <div class="stat"><b style="color:${semaine ? 'var(--ko)' : 'inherit'}">${semaine}</b><span>dans les 7 jours</span></div>
+      <div class="stat"><b style="color:var(--warn)">${liste.filter(e => joursJusqua(e.date) <= 30).length}</b><span>dans les 30 jours</span></div>
+      <div class="stat"><b>${liste.filter(e => e.type === 'Aide').length}</b><span>clôture${liste.filter(e => e.type === 'Aide').length > 1 ? 's' : ''} d’aides</span></div>
+    </div>
+    <div class="outils">${[['', 'Tout'], ['Fiscal', 'Fiscal'], ['Aide', 'Aides'], ['Actualité', 'Actualités']].map(([k, l]) => puce('filtre-ech', k, type, l)).join('')}</div>
+    <div class="outils">${[[30, '30 jours'], [60, '60 jours'], [90, '3 mois'], [180, '6 mois']].map(([k, l]) => puce('horizon-ech', k, jours, l)).join('')}</div>
+    ${Object.keys(parMois).length ? Object.entries(parMois).map(([k, l]) => `<h3 class="ech-groupe">${esc(maj1(parseD(k + '-01').toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })))}</h3>
+      <div class="ech-liste">${l.map(tuileEcheance).join('')}</div>`).join('') : '<div class="empty">Aucune échéance sur cette période.</div>'}
+    <p class="list-count">« Règle générale » : dates du calendrier fiscal courant, reportées au jour ouvré suivant si elles tombent un week-end ou un jour férié. Les dates exactes de chaque client (TVA selon le SIREN, exercice décalé, mensualisation) sont dans son espace professionnel.</p>`;
+}
+
+// ------------------------------------------------------------------ vue Accueil
+// Résumé du matin + échéances importantes (aides et actualités datées) + nouveautés.
+function vueAccueil(){
+  const d = S.data, j = d.journal[0], horizon = 30;
+  const nomTheme = Object.fromEntries(d.themes.map(t => [t.id, t.nom]));
+  const echeances = toutesEcheances(horizon);
+  const depuis = j ? new Date(new Date(j.debut).getTime() - 3600000) : new Date(Date.now() - 86400000);
+  const nouveautes = d.articles.filter(a => new Date(a.created_at) >= depuis)
+    .sort((a, b) => (b.importance || 0) - (a.importance || 0));
+  const al = alertes().filter(a => a.cle !== 'cloture');
+  const heure = new Date().getHours();
+  const salut = heure < 12 ? 'Bonjour' : heure < 18 ? 'Bon après-midi' : 'Bonsoir';
+  return `${tete(`${salut} — ${new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}`, '')}
+    ${al.map(a => `<div class="bandeau erreur"><b>⚠ ${esc(a.titre)}</b><br>${esc(a.detail)} <button type="button" class="lien-btn" data-action="vue" data-v="journal">Voir le journal</button></div>`).join('')}
+    <div class="article">
+      <span class="sous-titre">Résumé de la collecte ${j ? esc(ilYa(j.debut)) : ''}</span>
+      ${j ? `<div class="stats">
+          <div class="stat"><b>${nouveautes.length}</b><span>nouvelle${nouveautes.length > 1 ? 's' : ''} actu${nouveautes.length > 1 ? 's' : ''}</span></div>
+          <div class="stat"><b>${j.nb_aides ?? '—'}</b><span>aide${(j.nb_aides || 0) > 1 ? 's' : ''} vérifiée${(j.nb_aides || 0) > 1 ? 's' : ''}</span></div>
+          <div class="stat"><b style="color:${echeances.length ? 'var(--warn)' : 'inherit'}">${echeances.length}</b><span>échéance${echeances.length > 1 ? 's' : ''} sous ${horizon} j</span></div>
+        </div>
+        <p class="article-summary resume-matin">${esc(j.resume || '')}</p>
+        <button type="button" class="lien-btn" data-action="vue" data-v="journal">Journal complet et suggestions de l’IA →</button>`
+      : '<p class="article-summary">Aucune collecte enregistrée pour le moment.</p>'}
+    </div>
+    ${tete('Échéances importantes', `${horizon} prochains jours`)}
+    ${echeances.length ? `<div class="ech-liste">${echeances.slice(0, 8).map(tuileEcheance).join('')}</div>` : '<div class="empty">Aucune échéance dans les 30 prochains jours.</div>'}
+    <button type="button" class="btn" data-action="vue" data-v="echeances">Toutes les échéances${echeances.length > 8 ? ` (${echeances.length} sur 30 jours)` : ''} →</button>
+    ${tete('Nouveautés de la dernière collecte', pluriel(nouveautes.length, 'article', 'articles'))}
+    ${nouveautes.length ? nouveautes.slice(0, 6).map(a => carteArticle(a, nomTheme)).join('')
+      + (nouveautes.length > 6 ? `<button type="button" class="btn" data-action="vue" data-v="actus">Voir les ${nouveautes.length} nouveautés →</button>` : '')
+      : '<div class="empty">Pas de nouvel article depuis la dernière collecte.</div>'}`;
+}
+
+// ------------------------------------------------------------------ vue Calendrier des cultures
+function vueCultures(){
+  const d = S.data, moisCourant = new Date().getMonth() + 1;
+  const theme = d.themes.find(t => norm(t.nom).includes('calendrier'));
+  const suivis = theme ? d.articles.filter(a => a.theme_id === theme.id)
+    .sort((a, b) => String(b.date_publication || b.created_at).localeCompare(String(a.date_publication || a.created_at))) : [];
+  const nomTheme = Object.fromEntries(d.themes.map(t => [t.id, t.nom]));
+  const enCours = CULTURES.filter(c => c.s.includes(moisCourant) || c.r.includes(moisCourant));
+  const cellule = (c, m) => {
+    const s = c.s.includes(m), r = c.r.includes(m);
+    const cls = s && r ? 'sr' : s ? 's' : r ? 'r' : '';
+    const lib = s && r ? 'semis et récolte' : s ? 'semis' : r ? 'récolte' : '';
+    return `<td class="${cls} ${m === moisCourant ? 'now' : ''}" ${lib ? `title="${esc(c.nom)} : ${lib} en ${MOIS_LONGS[m - 1]}"` : ''}>${lib ? `<span class="sr-only">${lib}</span>` : ''}</td>`;
+  };
+  return `${tete('Calendrier des cultures', 'Bourgogne-Franche-Comté')}
+    <div class="stats">
+      <div class="stat"><b>${esc(MOIS_LONGS[moisCourant - 1])}</b><span>mois en cours</span></div>
+      <div class="stat"><b>${enCours.length}</b><span>culture${enCours.length > 1 ? 's' : ''} en chantier ce mois-ci</span></div>
+      <div class="stat"><b>${suivis.length}</b><span>point${suivis.length > 1 ? 's' : ''} d’avancement</span></div>
+    </div>
+    <div class="cal-wrap">
+      <table class="cal">
+        <caption class="sr-only">Périodes de semis et de récolte par culture</caption>
+        <thead><tr><th scope="col">Culture</th>${MOIS_COURTS.map((m, i) => `<th scope="col" class="${i + 1 === moisCourant ? 'now' : ''}" title="${MOIS_LONGS[i]}">${m}</th>`).join('')}</tr></thead>
+        <tbody>${CULTURES.map(c => `<tr><th scope="row" title="${esc(c.note)}">${esc(c.nom)}</th>${MOIS_COURTS.map((_, i) => cellule(c, i + 1)).join('')}</tr>`).join('')}</tbody>
+      </table>
+    </div>
+    <div class="cal-legende"><span><i class="s"></i>Semis</span><span><i class="r"></i>Récolte, fauche ou vendange</span><span><i class="now-l"></i>Mois en cours</span></div>
+    <p class="list-count">Repères indicatifs pour la plaine (Haute-Saône et Bourgogne-Franche-Comté). Les dates varient selon l’année, la parcelle, la variété et la météo : l’avancement réel est suivi ci-dessous chaque semaine par la veille (FranceAgriMer Céré’Obs, Arvalis, chambres d’agriculture).</p>
+    ${enCours.length ? `<div class="article"><span class="sous-titre">En ${esc(MOIS_LONGS[moisCourant - 1])}</span>
+      <ul class="historique">${enCours.map(c => `<li><b>${esc(c.nom)}</b> — ${c.s.includes(moisCourant) ? 'semis' : ''}${c.s.includes(moisCourant) && c.r.includes(moisCourant) ? ' et ' : ''}${c.r.includes(moisCourant) ? 'récolte' : ''} : ${esc(c.note)}</li>`).join('')}</ul></div>` : ''}
+    ${tete('Avancement des travaux (veille hebdomadaire)', pluriel(suivis.length, 'point', 'points'))}
+    ${suivis.length ? suivis.map(a => carteArticle(a, nomTheme)).join('') : '<div class="empty">Pas encore de point d’avancement : la veille en ajoute un par semaine.</div>'}`;
+}
+
+// ------------------------------------------------------------------ vue Aides
+const estAgricole = a => (a.tags || []).some(t => /agricult|viticult|élevage|elevage/i.test(t));
+function vueAides(){
+  const toutes = S.data.aides;
+  const ouvertes = periodesOuvertes().length, urgentes = periodesUrgentes().length;
+  const aVerifier = toutes.filter(a => a.suivre && aideAncienne(a)).length;
+  const q = norm(S.f.q);
+  const ordre = { ouverte: 0, a_venir: 1, inconnue: 2, suspendue: 3, fermee: 4 };
+  const liste = toutes.filter(a => {
+    const s = statutAide(a);
+    if (S.f.aides === 'actives' && !['ouverte', 'a_venir', 'inconnue'].includes(s)) return false;
+    if (S.f.aides === 'ouvertes' && s !== 'ouverte') return false;
+    if (S.f.aides === 'fermees' && !['fermee', 'suspendue'].includes(s)) return false;
+    if (S.f.secteur === 'agri' && !estAgricole(a)) return false;
+    if (S.f.secteur === 'autres' && estAgricole(a)) return false;
+    return !q || norm([a.nom, a.organisme, a.description, (a.tags || []).join(' ')].join(' ')).includes(q);
+  }).sort((a, b) => (ordre[statutAide(a)] - ordre[statutAide(b)]) || String(prochaineCloture(a) || '9').localeCompare(String(prochaineCloture(b) || '9')) || a.nom.localeCompare(b.nom));
+  const puce = (k, l) => `<button type="button" class="puce ${S.f.aides === k ? 'is-active' : ''}" data-action="filtre-aides" data-v="${k}">${l}</button>`;
+  return `${tete('Aides et dispositifs', pluriel(liste.length, 'aide', 'aides'))}
+    <div class="stats">
+      <div class="stat"><b style="color:var(--ok)">${ouvertes}</b><span>période${ouvertes > 1 ? 's' : ''} ouverte${ouvertes > 1 ? 's' : ''}</span></div>
+      <div class="stat"><b style="color:${urgentes ? 'var(--ko)' : 'inherit'}">${urgentes}</b><span>clôture ≤ ${CFG.alerteClotureJours} j</span></div>
+      <div class="stat"><b style="color:${aVerifier ? 'var(--warn)' : 'inherit'}">${aVerifier}</b><span>à revérifier</span></div>
+    </div>
+    <div class="outils">${champRecherche('Rechercher une aide…')}
+      ${puce('actives', 'En cours')}${puce('ouvertes', 'Ouvertes')}${puce('fermees', 'Clôturées')}${puce('toutes', 'Toutes')}</div>
+    <div class="outils">${[['', 'Tous secteurs'], ['agri', `Agricoles (${toutes.filter(estAgricole).length})`], ['autres', `Autres activités (${toutes.filter(a => !estAgricole(a)).length})`]]
+      .map(([k, l]) => `<button type="button" class="puce ${(S.f.secteur || '') === k ? 'is-active' : ''}" data-action="filtre-secteur" data-v="${k}">${l}</button>`).join('')}</div>
+    ${liste.length ? liste.map(carteAide).join('') : '<div class="empty">Aucune aide dans ce filtre.</div>'}`;
+}
+function lignePeriode(p){
+  const s = statutPeriode(p);
+  let jours = '', cls = s;
+  if (s === 'ouverte' && p.depot_cloture){
+    const n = joursJusqua(p.depot_cloture), urg = n <= CFG.alerteClotureJours;
+    if (urg) cls += ' urgente';
+    jours = `<span class="jours" style="color:${urg ? 'var(--ko)' : 'var(--ok)'}">${n === 0 ? "Clôture aujourd'hui" : `J-${n}`}</span>`;
+  } else if (s === 'ouverte') jours = '<span class="jours" style="color:var(--ok)">ouverte</span>';
+  else if (s === 'a_venir' && p.depot_ouverture) jours = `<span class="jours" style="color:var(--info)">ouvre dans ${joursJusqua(p.depot_ouverture)} j</span>`;
+  else if (s === 'cloturee') jours = '<span class="jours" style="color:var(--muted)">clôturée</span>';
+  const dates = [
+    (p.depot_ouverture || p.depot_cloture) ? `Dépôt : ${fr(p.depot_ouverture)} → <b>${fr(p.depot_cloture)}</b>` : 'Dates de dépôt non confirmées',
+    (p.periode_debut || p.periode_fin) ? `Période couverte : ${fr(p.periode_debut)} → ${fr(p.periode_fin)}` : '',
+    p.taux ? `Taux : ${esc(p.taux)}` : ''
+  ].filter(Boolean).join(' · ');
+  return `<div class="periode ${cls}">
+    <span class="lib">${esc(p.libelle)}</span>${jours}
+    <span class="dates">${dates}${p.details ? `<br>${esc(p.details)}` : ''}${p.lien ? ` · <a href="${urlSure(p.lien)}" target="_blank" rel="noopener">lien</a>` : ''}</span>
+  </div>`;
+}
+function carteAide(a){
+  const s = statutAide(a), [lib, cls] = LIB_STATUT[s] || LIB_STATUT.inconnue;
+  const per = (a.aides_periodes || []).slice().sort((x, y) => String(x.depot_cloture || x.depot_ouverture || '').localeCompare(String(y.depot_cloture || y.depot_ouverture || '')));
+  const actives = per.filter(p => statutPeriode(p) !== 'cloturee');
+  const closes = per.filter(p => statutPeriode(p) === 'cloturee').reverse();
+  const hist = (a.aides_historique || []).slice().sort((x, y) => String(y.date).localeCompare(String(x.date)));
+  const champ = (l, v) => v ? `<dt>${l}</dt><dd>${esc(v)}</dd>` : '';
+  const idd = 'aide-' + a.id;
+  return `<article class="article">
+    <div class="article-row">
+      <div class="article-body">
+        <span class="article-title">${esc(a.nom)}</span>
+        ${a.montant ? `<p class="article-summary">${esc(a.montant)}</p>` : ''}
+        <span class="article-cat">${esc(a.organisme || '')}${(a.tags || []).map(t => `<span class="doux">#${esc(t)}</span>`).join('')}</span>
+      </div>
+      <div class="article-side">
+        <span class="badge ${cls}">${lib}</span>
+        <span class="article-when" style="color:${aideAncienne(a) ? 'var(--warn)' : ''}" title="Dernière vérification par l'IA">vérifiée ${esc(ilYa(a.verifie_le))}</span>
+      </div>
+    </div>
+    <div class="periodes">${actives.length ? actives.map(lignePeriode).join('') : '<span class="article-summary">Aucune période ouverte ou à venir connue.</span>'}</div>
+    <details data-id="${esc(idd)}" ${S.ouverts.has(idd) ? 'open' : ''}>
+      <summary>Détails, historique et notes</summary>
+      <div class="details-corps">
+        <dl>${champ('Description', a.description)}${champ('Bénéficiaires', a.beneficiaires)}${champ('Conditions', a.conditions)}</dl>
+        <div class="panneau ligne" style="border:0;padding:0;flex-direction:row;flex-wrap:wrap;gap:14px">
+          ${a.lien_officiel ? `<a href="${urlSure(a.lien_officiel)}" target="_blank" rel="noopener">Page officielle ↗</a>` : ''}
+          ${a.lien_demarche ? `<a href="${urlSure(a.lien_demarche)}" target="_blank" rel="noopener">Faire la démarche ↗</a>` : ''}
+          ${(a.sources_verification || []).map((u, i) => `<a href="${urlSure(u)}" target="_blank" rel="noopener">Source ${i + 1}</a>`).join('')}
+        </div>
+        ${closes.length ? `<p class="sous-titre">Périodes clôturées</p><div class="periodes">${closes.map(lignePeriode).join('')}</div>` : ''}
+        ${hist.length ? `<p class="sous-titre">Historique des changements</p><ul class="historique">${hist.slice(0, 15).map(h => `<li>${fr(h.date)} — ${esc(h.changement)}${h.source ? ` (<a href="${urlSure(h.source)}" target="_blank" rel="noopener">source</a>)` : ''}</li>`).join('')}</ul>` : ''}
+        <p class="sous-titre">Mes notes <span style="text-transform:none;font-weight:500">— l'IA n'y touche pas</span></p>
+        <textarea id="note-aide-${esc(a.id)}" placeholder="Ma note…">${esc(a.notes)}</textarea>
+        <div class="ligne" style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+          <button type="button" class="btn" data-action="aide-note" data-id="${esc(a.id)}">Enregistrer la note</button>
+          <label class="check"><input type="checkbox" data-change="aide-suivre" data-id="${esc(a.id)}" ${a.suivre ? 'checked' : ''}> L'IA continue de la vérifier</label>
+        </div>
+      </div>
+    </details>
+  </article>`;
+}
+
+// ------------------------------------------------------------------ vue Actualités
+function quand(a){
+  const d = a.date_publication;
+  if (!d || d === auj() || d === isoLocal(new Date(a.created_at))) return maj1(ilYa(a.created_at));
+  return frCourt(d);
+}
+function vueArticles(conservees){
+  const d = S.data, q = norm(S.f.q);
+  const nomTheme = Object.fromEntries(d.themes.map(t => [t.id, t.nom]));
+  const liste = d.articles.filter(a =>
+    (!conservees || a.conserver) &&
+    (conservees || !S.f.theme || a.theme_id === S.f.theme) &&
+    (conservees || !S.f.nonLus || !a.lu) &&
+    (!q || norm([a.titre, a.resume, a.source, a.notes, (a.tags || []).join(' ')].join(' ')).includes(q))
+  );
+  const titre = conservees ? 'Actualités conservées' : S.f.theme ? (nomTheme[S.f.theme] || 'Thème') : 'Toutes les actualités';
+  const nonLus = liste.filter(a => !a.lu).length;
+  return `${tete(titre, pluriel(liste.length, 'article', 'articles') + (nonLus && !conservees ? ` · ${nonLus} non lu${nonLus > 1 ? 's' : ''}` : ''))}
+    <div class="outils">${champRecherche('Rechercher une actualité…')}
+      ${conservees ? '' : `<button type="button" class="puce ${S.f.nonLus ? 'is-active' : ''}" data-action="nonlus">Non lues</button>
+      ${nonLus ? '<button type="button" class="lien-btn" data-action="tout-lu">Tout marquer lu</button>' : ''}`}
+    </div>
+    ${liste.length ? liste.map(a => carteArticle(a, nomTheme)).join('')
+      : `<div class="empty">${conservees ? 'Aucune actualité conservée. Utilise le marque-page pour en garder une.' : 'Aucun article dans cette catégorie pour le moment.'}</div>`}`;
+}
+function carteArticle(a, nomTheme){
+  const purge = ajouterJours(a.created_at, CFG.joursAvantPurge);
+  const n = joursJusqua(a.date_fin && a.date_fin > purge ? a.date_fin : purge);
+  const devenir = a.conserver ? 'Conservée sans limite'
+    : a.date_fin && a.date_fin >= purge ? `Gardée jusqu'au ${fr(a.date_fin)}`
+    : `Suppression automatique ${n <= 0 ? 'cette nuit' : `dans ${n} j`}`;
+  const echeanceProche = a.date_fin && joursJusqua(a.date_fin) >= 0 && joursJusqua(a.date_fin) <= CFG.alerteClotureJours;
+  const idp = 'art-' + a.id;
+  return `<article class="article ${a.lu ? 'is-read' : ''}">
+    <div class="article-row">
+      <div class="article-body">
+        <a class="article-title" href="${urlSure(a.url)}" target="_blank" rel="noopener" data-action="ouvrir" data-id="${esc(a.id)}">${esc(a.titre)}</a>
+        ${a.resume ? `<p class="article-summary">${esc(a.resume)}</p>` : ''}
+        <span class="article-cat">
+          ${a.theme_id && nomTheme[a.theme_id] ? `<span>${esc(nomTheme[a.theme_id])}</span>` : ''}
+          ${a.importance ? `<span class="etoiles" title="Importance">${'★'.repeat(a.importance)}</span>` : ''}
+          ${a.source ? `<span class="doux">${esc(a.source)}</span>` : ''}
+          ${a.date_fin ? `<span class="badge ${echeanceProche ? 'b-warn' : 'b-accent'}">Échéance ${fr(a.date_fin)}</span>` : ''}
+          ${(a.tags || []).map(t => `<span class="doux">#${esc(t)}</span>`).join('')}
+        </span>
+        ${a.notes ? `<div class="note">${esc(a.notes)}</div>` : ''}
+      </div>
+      <div class="article-side">
+        <div class="article-meta">
+          <span class="article-when">${esc(quand(a))}</span>
+          <span class="dot ${a.lu ? '' : 'is-unread'}">${a.lu ? '' : '<span class="sr-only">Non lu</span>'}</span>
+        </div>
+        <div class="side-btns">
+          <button type="button" class="icon-btn petit save ${a.conserver ? 'is-saved' : ''}" data-action="conserver" data-id="${esc(a.id)}" aria-pressed="${a.conserver}" aria-label="${a.conserver ? 'Ne plus conserver' : 'Conserver sans limite'}" title="${a.conserver ? 'Ne plus conserver' : 'Conserver sans limite'}">${ICO.bookmark}</button>
+          <button type="button" class="icon-btn petit" data-action="plus" data-id="${esc(a.id)}" aria-expanded="${S.ouverts.has(idp)}" aria-label="Plus d'actions" title="Plus d'actions">${ICO.more}</button>
+        </div>
+      </div>
+    </div>
+    ${S.ouverts.has(idp) ? `<div class="panneau">
+      <div class="ligne">
+        <button type="button" class="btn" data-action="lu" data-id="${esc(a.id)}">${a.lu ? 'Marquer non lu' : 'Marquer lu'}</button>
+        <label class="check">Garder jusqu'au <input type="date" data-change="date-fin" data-id="${esc(a.id)}" value="${esc(a.date_fin || '')}"></label>
+        ${a.date_fin ? `<button type="button" class="lien-btn" data-action="sans-date" data-id="${esc(a.id)}">retirer la date</button>` : ''}
+        <span class="list-count" style="margin-left:auto">${devenir}</span>
+      </div>
+      <textarea id="note-art-${esc(a.id)}" placeholder="Ma note…">${esc(a.notes)}</textarea>
+      <div class="ligne">
+        <button type="button" class="btn primaire" data-action="note-art" data-id="${esc(a.id)}">Enregistrer la note</button>
+        <button type="button" class="btn danger" data-action="supprimer" data-id="${esc(a.id)}" style="margin-left:auto;display:flex;gap:6px;align-items:center">${ICO.trash}Supprimer</button>
+      </div>
+    </div>` : ''}
+  </article>`;
+}
+
+// ------------------------------------------------------------------ vue Thèmes
+function vueThemes(){
+  return `${tete('Thèmes & consignes', pluriel(S.data.themes.length, 'thème', 'thèmes'))}
+    <p class="article-summary" style="padding:0 8px">L'IA lit ces thèmes et leurs consignes à chaque collecte. Sois précis : sujets, sources à privilégier, ce qu'il faut ignorer.</p>
+    ${S.data.themes.map(t => `<article class="article">
+      <div class="panneau" style="border:0;padding:0">
+        <div class="ligne"><input id="th-nom-${esc(t.id)}" value="${esc(t.nom)}" style="flex:1;font-weight:700" aria-label="Nom du thème">
+          <label class="check"><input type="checkbox" id="th-actif-${esc(t.id)}" ${t.actif ? 'checked' : ''}> actif</label></div>
+        <textarea id="th-cons-${esc(t.id)}" placeholder="Consignes pour l'IA…">${esc(t.consignes)}</textarea>
+        <div class="ligne"><button type="button" class="btn primaire" data-action="theme-sauver" data-id="${esc(t.id)}">Enregistrer</button>
+          <button type="button" class="btn danger" data-action="theme-suppr" data-id="${esc(t.id)}">Supprimer</button></div>
+      </div>
+    </article>`).join('')}
+    <article class="article">
+      <div class="panneau" style="border:0;padding:0">
+        <span class="article-title">Nouveau thème</span>
+        <input id="th-nom-new" placeholder="Nom (ex. Fiscalité agricole)">
+        <textarea id="th-cons-new" placeholder="Consignes pour l'IA…"></textarea>
+        <div class="ligne"><button type="button" class="btn primaire" data-action="theme-sauver" data-id="">Ajouter</button></div>
+      </div>
+    </article>`;
+}
+
+// ------------------------------------------------------------------ vue Journal
+function vueJournal(){
+  const j = S.data.journal;
+  return tete('Journal de l’IA', pluriel(j.length, 'collecte', 'collectes')) + (!j.length ? '<div class="empty">Aucune collecte pour le moment.</div>' : j.map(x => `<article class="article">
+    <div class="article-row">
+      <div class="article-body">
+        <span class="article-title" style="font-size:16px">${esc(maj1(new Date(x.debut).toLocaleString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })))}</span>
+        ${x.resume ? `<p class="article-summary pre">${esc(x.resume)}</p>` : ''}
+      </div>
+      <div class="article-side">
+        ${x.nb_articles != null ? `<span class="badge b-accent">${pluriel(x.nb_articles, 'actu', 'actus')}</span>` : ''}
+        ${x.nb_aides != null ? `<span class="badge b-ok">${pluriel(x.nb_aides, 'aide vérifiée', 'aides vérifiées')}</span>` : ''}
+      </div>
+    </div>
+    ${x.suggestions ? `<div class="note"><b style="color:var(--accent-soft)">Suggestions d'amélioration</b>\n${esc(x.suggestions)}</div>` : ''}
+    ${x.erreurs ? `<div class="note erreur">${esc(x.erreurs)}</div>` : ''}
+  </article>`).join(''));
+}
+
+// ------------------------------------------------------------------ connexion
+function renderConnexion(){
+  const v = S.veille;
+  $app.innerHTML = `<div class="page"><form class="connexion" data-form="connexion">
+    <div class="brand">${ICO.logo}<div class="brand-text"><span class="brand-title">${esc(v.nom)}</span><span class="brand-sub">${esc(v.sousTitre || 'Connexion')}</span></div></div>
+    ${CFG.veilles.length > 1 ? `<select data-change="veille-select" aria-label="Veille">${CFG.veilles.map(x => `<option value="${esc(x.id)}" ${x.id === v.id ? 'selected' : ''}>${esc(x.nom)}</option>`).join('')}</select>` : ''}
+    <input type="email" name="email" placeholder="E-mail" autocomplete="username" required>
+    <input type="password" name="mdp" placeholder="Mot de passe" autocomplete="current-password" required>
+    <button class="btn primaire" type="submit">Se connecter</button>
+    ${S.erreur ? `<div class="erreur">${esc(S.erreur)}</div>` : ''}
+    <a href="?demo" style="font-size:14px;text-align:center">Voir la démonstration</a>
+  </form></div>`;
+}
+function renderMessage(titre, html){
+  $app.innerHTML = `<div class="page"><div class="connexion"><div class="brand">${ICO.logo}<div class="brand-text"><span class="brand-title">${esc(titre)}</span></div></div>${html}</div></div>`;
+}
+
+// ------------------------------------------------------------------ actions
+async function action(fn, okMsg){
+  try { await fn(); if (okMsg) toast(okMsg); }
+  catch (e) { console.error(e); toast('Erreur : ' + (e.message || e)); await charger(); }
+}
+const art = id => S.data.articles.find(a => a.id === id);
+const aide = id => S.data.aides.find(a => a.id === id);
+async function majArticleLocal(id, patch, msg){
+  Object.assign(art(id), patch); render();
+  await action(() => S.api.majArticle(id, patch), msg);
+}
+function allerA(vue, theme = ''){
+  S.vue = vue; S.f.theme = theme; store.setItem('veille.vue', vue);
+  render();
+  if (window.innerWidth <= 760) document.getElementById('contenu')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  else window.scrollTo(0, 0);
+}
+
+document.addEventListener('click', async e => {
+  const el = e.target.closest('[data-action]');
+  if (S.menu && !e.target.closest('.menu') && el?.dataset.action !== 'menu') { S.menu = false; render(); if (!el) return; }
+  if (S.alertes && !e.target.closest('.alertes') && el?.dataset.action !== 'alertes') { S.alertes = false; render(); if (!el) return; }
+  if (!el) return;
+  const id = el.dataset.id, A = el.dataset.action;
+  switch (A){
+    case 'vue': allerA(el.dataset.v, el.dataset.theme || ''); break;
+    case 'reset': S.f = { q: '', theme: '', nonLus: false, aides: 'actives' }; S.recherche = false; allerA(S.vue === 'conservees' ? 'actus' : S.vue); break;
+    case 'recherche':
+      S.recherche = !S.recherche; if (!S.recherche) S.f.q = '';
+      if (!['aides', 'actus', 'conservees'].includes(S.vue)) S.vue = 'actus';
+      render(); document.querySelector('[data-input="q"]')?.focus(); break;
+    case 'alertes': {
+      S.alertes = !S.alertes; S.menu = false;
+      const j = S.data.journal[0];
+      if (S.alertes && j && String(j.erreurs || '').trim()) store.setItem('veille.erreurVue', String(j.id));
+      render(); break;
+    }
+    case 'alerte-ouvrir': S.alertes = false; if (el.dataset.v === 'aides') S.f.aides = 'ouvertes'; allerA(el.dataset.v); break;
+    case 'menu': S.menu = !S.menu; S.alertes = false; render(); break;
+    case 'veille': S.menu = false; store.setItem('veille.courante', el.dataset.v); demarrer(); break;
+    case 'quitter-demo': location.href = location.pathname; break;
+    case 'filtre-aides': S.f.aides = el.dataset.v; majContenu(); break;
+    case 'filtre-secteur': S.f.secteur = el.dataset.v; majContenu(); break;
+    case 'filtre-ech': S.f.typeEch = el.dataset.v; majContenu(); break;
+    case 'horizon-ech': S.f.horizon = Number(el.dataset.v); majContenu(); break;
+    case 'nonlus': S.f.nonLus = !S.f.nonLus; majContenu(); break;
+    case 'rafraichir': await charger(); toast('À jour'); break;
+    case 'deconnexion': S.menu = false; await S.sb.auth.signOut(); S.user = null; render(); break;
+    case 'ouvrir': if (!art(id).lu) setTimeout(() => majArticleLocal(id, { lu: true }), 0); break; // le lien s'ouvre normalement
+    case 'plus': { const k = 'art-' + id; S.ouverts.has(k) ? S.ouverts.delete(k) : S.ouverts.add(k); majContenu(); break; }
+    case 'lu': majArticleLocal(id, { lu: !art(id).lu }); break;
+    case 'conserver': majArticleLocal(id, { conserver: !art(id).conserver }, art(id).conserver ? 'Retirée des conservées' : 'Conservée sans limite'); break;
+    case 'tout-lu': {
+      const ids = S.data.articles.filter(a => !a.lu && (!S.f.theme || a.theme_id === S.f.theme)).map(a => a.id);
+      ids.forEach(i => art(i).lu = true); render();
+      await action(() => Promise.all(ids.map(i => S.api.majArticle(i, { lu: true }))), 'Tout est marqué lu');
+      break;
+    }
+    case 'supprimer':
+      if (!confirm('Supprimer définitivement cette actualité ?')) return;
+      S.data.articles = S.data.articles.filter(a => a.id !== id); render();
+      await action(() => S.api.supprimerArticle(id), 'Supprimée');
+      break;
+    case 'sans-date': majArticleLocal(id, { date_fin: null }, 'Date retirée'); break;
+    case 'note-art': majArticleLocal(id, { notes: document.getElementById('note-art-' + id).value.trim() || null }, 'Note enregistrée'); break;
+    case 'aide-note': {
+      const notes = document.getElementById('note-aide-' + id).value.trim() || null;
+      aide(id).notes = notes;
+      await action(() => S.api.majAide(id, { notes }), 'Note enregistrée');
+      break;
+    }
+    case 'theme-sauver': {
+      const k = id || 'new';
+      const nom = document.getElementById('th-nom-' + k).value.trim();
+      if (!nom) return toast('Le nom est obligatoire');
+      const t = { id: id || null, nom, consignes: document.getElementById('th-cons-' + k).value.trim() || null,
+        actif: id ? document.getElementById('th-actif-' + k).checked : true };
+      await action(() => S.api.sauverTheme(t), 'Thème enregistré'); await charger();
+      break;
+    }
+    case 'theme-suppr':
+      if (!confirm('Supprimer ce thème ? Les actus associées restent, sans thème.')) return;
+      await action(() => S.api.supprimerTheme(id), 'Thème supprimé'); await charger();
+      break;
+  }
+});
+
+document.addEventListener('change', async e => {
+  const el = e.target, C = el.dataset.change; if (!C) return;
+  const id = el.dataset.id;
+  if (C === 'veille-select') { store.setItem('veille.courante', el.value); return demarrer(); }
+  if (C === 'date-fin') return majArticleLocal(id, { date_fin: el.value || null }, el.value ? `Gardée jusqu'au ${fr(el.value)}` : 'Date retirée');
+  if (C === 'aide-suivre') { aide(id).suivre = el.checked; return action(() => S.api.majAide(id, { suivre: el.checked }), el.checked ? "L'IA vérifiera cette aide" : "L'IA ne vérifiera plus cette aide"); }
+});
+
+document.addEventListener('input', e => {
+  if (e.target.dataset.input !== 'q') return;
+  S.f.q = e.target.value;
+  const pos = e.target.selectionStart;
+  majContenu();
+  const nouv = document.querySelector('[data-input="q"]');
+  if (nouv) { nouv.focus(); nouv.setSelectionRange(pos, pos); }
+});
+
+document.addEventListener('toggle', e => {
+  const d = e.target; if (d.tagName !== 'DETAILS' || !d.dataset.id) return;
+  d.open ? S.ouverts.add(d.dataset.id) : S.ouverts.delete(d.dataset.id);
+}, true);
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && (S.menu || S.alertes)) { S.menu = false; S.alertes = false; render(); } });
+
+document.addEventListener('submit', async e => {
+  if (e.target.dataset.form !== 'connexion') return;
+  e.preventDefault();
+  const f = new FormData(e.target);
+  S.erreur = '';
+  const { data, error } = await S.sb.auth.signInWithPassword({ email: f.get('email'), password: f.get('mdp') });
+  if (error) { S.erreur = 'Connexion impossible : ' + error.message; return render(); }
+  S.user = data.user;
+  await charger();
+});
+
+// ------------------------------------------------------------------ démarrage
+async function charger(){
+  S.chargement = !S.data.aides.length && !S.data.articles.length;
+  S.erreur = '';
+  render();
+  try { S.data = await S.api.charger(); }
+  catch (e) {
+    console.error(e);
+    S.erreur = 'Chargement impossible : ' + (e.message || e) +
+      (/permission|policy|JWT/i.test(e.message || '') ? " — vérifie que ton e-mail est dans la table utilisateurs_autorises." : '');
+  }
+  S.chargement = false;
+  render();
+}
+
+async function demarrer(){
+  const choix = store.getItem('veille.courante');
+  S.veille = CFG.veilles.find(v => v.id === choix) || CFG.veilles[0];
+  S.data = { themes: [], articles: [], aides: [], journal: [] };
+  S.f = { q: '', theme: '', nonLus: false, aides: 'actives' };
+  if (DEMO) { S.api = apiDemo(); S.user = { email: 'demo@veille' }; return charger(); }
+  if (!window.supabase) return renderMessage('Hors ligne', '<p class="erreur">Impossible de charger Supabase : vérifie la connexion internet.</p>');
+  if (/VOTRE-PROJET/.test(S.veille.supabaseUrl)) return renderMessage('Configuration', '<p class="article-summary">Renseigne <code>supabaseUrl</code> et <code>supabaseKey</code> en haut du fichier <code>index.html</code>.</p><a href="?demo">Voir la démonstration</a>');
+  S.sb = window.supabase.createClient(S.veille.supabaseUrl, S.veille.supabaseKey, {
+    auth: { persistSession: true, autoRefreshToken: true, storage: store, storageKey: 'veille-auth-' + S.veille.id }
+  });
+  S.api = apiSupabase(S.sb, S.veille.id);
+  const { data } = await S.sb.auth.getSession();
+  S.user = data.session?.user || null;
+  if (S.user) await charger(); else render();
+}
+
+demarrer();
+})();
+</script>
+</body>
+</html>
