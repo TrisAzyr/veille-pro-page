@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" data-theme="clair">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0F1024">
+<meta name="theme-color" content="#6a4be0">
+<script>try{var t=localStorage.getItem('veille.style');if(t==='clair'||t==='sombre'||t==='video')document.documentElement.dataset.theme=t;}catch(e){}</script>
 <title>Veille</title>
 
 <!-- =================================================================
@@ -35,47 +36,123 @@ window.VEILLE_CONFIG = {
 
 <style>
 /* Design « D · Nuit violette » */
+/* Thèmes : « Clair » (par défaut), « Sombre », « Style vidéo » — sélecteur dans la barre du haut */
 :root{
-  --bg:#0F1024; --panel:#17182F; --card:#1E1F3A; --card-2:#24254A; --border:#2A2B4A;
-  --text:#ECEBFA; --muted:#A9A8C7; --nav-text:#CFCDE6;
-  --accent:#7C5CFF; --accent-soft:#B9A8FF;
-  --ok:#4ADE80; --ok-f:rgba(74,222,128,.12); --warn:#FBBF24; --warn-f:rgba(251,191,36,.12);
-  --ko:#FB7185; --ko-f:rgba(251,113,133,.12); --info:#7DD3FC; --info-f:rgba(125,211,252,.12);
   --radius-lg:18px; --radius-md:14px; --radius-sm:12px;
-  --font:"Plus Jakarta Sans","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+  --font:"Inter","Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+[data-theme="sombre"]{
+  --bg: radial-gradient(1200px 700px at 15% -10%, #2a1f5c 0%, transparent 60%),
+        radial-gradient(900px 600px at 100% 100%, #1b2a5e 0%, transparent 55%), #0b1024;
+  --panel: rgba(255,255,255,.06); --card: rgba(255,255,255,.09); --card-2: rgba(255,255,255,.13);
+  --border: rgba(255,255,255,.10); --text:#e8eaf6; --muted:#9aa3c7; --nav-text:#c9cdea;
+  --accent:#8b7cf6; --accent-2:#5b8def; --accent-soft:#b9adff; --accent-bg: rgba(139,124,246,.18);
+  --ok:#34d399; --ok-f:rgba(52,211,153,.14); --warn:#fbbf24; --warn-f:rgba(251,191,36,.14);
+  --ko:#fb7185; --ko-f:rgba(251,113,133,.14); --info:#7dd3fc; --info-f:rgba(125,211,252,.14);
+  --shadow: 0 10px 30px rgba(0,0,0,.35); --shadow-hover: 0 18px 40px rgba(0,0,0,.5);
+  --input: rgba(255,255,255,.05); --menu-bg: rgba(22,26,54,.96); --scheme: dark;
+}
+[data-theme="clair"]{
+  --bg: linear-gradient(135deg, #5b3fd6 0%, #8b6cf2 35%, #c4b2fb 70%, #ece6ff 100%);
+  --panel: rgba(255,255,255,.55); --card: rgba(255,255,255,.80); --card-2: rgba(255,255,255,.92);
+  --border: rgba(255,255,255,.6); --text:#24164f; --muted:#62558f; --nav-text:#3d2f72;
+  --accent:#6a4be0; --accent-2:#9b6cf5; --accent-soft:#5b3fd6; --accent-bg: rgba(124,92,240,.15);
+  --ok:#047857; --ok-f:rgba(5,150,105,.13); --warn:#b45309; --warn-f:rgba(217,119,6,.14);
+  --ko:#e11d48; --ko-f:rgba(225,29,72,.11); --info:#0369a1; --info-f:rgba(2,132,199,.12);
+  --shadow: 0 10px 30px rgba(60,30,140,.16); --shadow-hover: 0 18px 40px rgba(60,30,140,.28);
+  --input: rgba(255,255,255,.55); --menu-bg: rgba(255,255,255,.96); --scheme: light;
+}
+[data-theme="video"]{
+  --bg: linear-gradient(135deg, #0e7fd6 0%, #38a8f0 35%, #8fd0fb 70%, #cfeafe 100%);
+  --panel: rgba(255,255,255,.55); --card: rgba(255,255,255,.78); --card-2: rgba(255,255,255,.92);
+  --border: rgba(255,255,255,.6); --text:#0f2540; --muted:#4f6b88; --nav-text:#1c3a5c;
+  --accent:#0f2540; --accent-2:#1490e8; --accent-soft:#0b6fc0; --accent-bg: rgba(20,144,232,.14);
+  --ok:#047857; --ok-f:rgba(5,150,105,.13); --warn:#b45309; --warn-f:rgba(217,119,6,.14);
+  --ko:#e11d48; --ko-f:rgba(225,29,72,.11); --info:#0369a1; --info-f:rgba(2,132,199,.12);
+  --shadow: 0 10px 30px rgba(10,60,120,.15); --shadow-hover: 0 18px 40px rgba(10,60,120,.25);
+  --input: rgba(255,255,255,.55); --menu-bg: rgba(255,255,255,.96); --scheme: light;
 }
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.5}
-a{color:var(--accent-soft)} a:hover{color:#D9CFFF}
+html{min-height:100%}
+body{margin:0;min-height:100vh;background:var(--bg);background-attachment:fixed;color:var(--text);font-family:var(--font);font-size:15px;line-height:1.5;transition:color .4s}
+a{color:var(--accent-soft)} a:hover{color:var(--accent-2)}
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
-input,select,textarea{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px;max-width:100%;color:var(--text)}
+input,select,textarea{background:var(--input);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px;max-width:100%;color:var(--text)}
 input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:-1px}
-input[type=date]{color-scheme:dark}
+input[type=date]{color-scheme:var(--scheme)}
 input[type=checkbox]{accent-color:var(--accent);width:16px;height:16px;vertical-align:-3px}
 textarea{width:100%;min-height:80px;resize:vertical}
 svg{flex:none}
 
-.page{min-height:100vh;padding:24px;padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(safe-area-inset-bottom))}
-.wrap{max-width:1220px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+.page{min-height:100vh;padding:20px;padding-top:max(20px,env(safe-area-inset-top));padding-bottom:max(20px,env(safe-area-inset-bottom))}
+.app{max-width:1440px;margin:0 auto;display:grid;grid-template-columns:260px minmax(0,1fr);gap:20px;align-items:start}
+.colonne{display:flex;flex-direction:column;gap:20px;min-width:0}
+.glass{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius-lg);
+  backdrop-filter:blur(16px) saturate(140%);-webkit-backdrop-filter:blur(16px) saturate(140%);box-shadow:var(--shadow)}
+/* Barre du haut */
+.topbar{display:flex;align-items:center;gap:12px;padding:10px 12px;position:relative;z-index:6}
+.search{flex:1;min-width:0;display:flex;align-items:center;gap:10px;padding:9px 14px;border-radius:999px;background:var(--input);border:1px solid var(--border);color:var(--muted)}
+.search input{flex:1;min-width:0;border:0;outline:0;background:none;padding:0;font:inherit;color:var(--text)}
+.search input::placeholder{color:var(--muted)}
+.search:focus-within{border-color:var(--accent)}
+kbd{font-size:11px;padding:2px 6px;border-radius:6px;border:1px solid var(--border);color:var(--muted);font-family:inherit}
+.switcher{display:flex;gap:4px;padding:4px;border-radius:999px;background:var(--input);border:1px solid var(--border);flex:none}
+.switcher button{padding:7px 12px;border-radius:999px;font-size:13px;color:var(--muted);border:0;background:none;white-space:nowrap;transition:all .25s}
+.switcher button.on{background:var(--card);color:var(--text);box-shadow:var(--shadow)}
+.marque-mobile{display:none}
+/* Cartes de statistiques */
+.stats-top{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.stat-top{display:block;width:100%;padding:18px;transition:transform .2s ease,box-shadow .2s ease;text-align:left;color:var(--text);font:inherit;cursor:pointer}
+.stat-top:hover{transform:translateY(-5px);box-shadow:var(--shadow-hover)}
+.stat-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:8px}
+.stat-title{font-size:13px;color:var(--muted)}
+.stat-icon{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;color:#fff;flex:none}
+.stat-value{display:block;font-size:28px;font-weight:700;letter-spacing:-.02em;margin:2px 0 6px;font-variant-numeric:tabular-nums;line-height:1.1}
+.stat-change{display:block;font-size:12.5px;color:var(--muted)}
+.stat-change.bon{color:var(--ok)} .stat-change.alerte{color:var(--ko)}
+/* Icônes colorées des catégories */
+.c-fisc{background:linear-gradient(135deg,#8b5cf6,#6366f1)} .c-soc{background:linear-gradient(135deg,#ec4899,#f43f5e)}
+.c-compta{background:linear-gradient(135deg,#0ea5e9,#3b82f6)} .c-jur{background:linear-gradient(135deg,#f59e0b,#f97316)}
+.c-eco{background:linear-gradient(135deg,#10b981,#14b8a6)} .c-tech{background:linear-gradient(135deg,#64748b,#475569)}
+.c-agri{background:linear-gradient(135deg,#65a30d,#16a34a)} .c-sun{background:linear-gradient(135deg,#f97316,#dc2626)}
+.cat-icon{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;flex:none}
+.cat-icon svg{width:18px;height:18px}
+/* Onglets Tout / Non lus / Favoris */
+.tabs{display:flex;gap:4px;padding:4px;border-radius:999px;background:var(--input);border:1px solid var(--border);width:fit-content;max-width:100%;overflow-x:auto}
+.tab{padding:7px 14px;border-radius:999px;font-size:13px;color:var(--muted);border:0;background:none;white-space:nowrap;transition:all .2s}
+.tab.on{background:var(--card);color:var(--text);box-shadow:var(--shadow)}
+[data-theme="video"] .tab.on{background:#0f2540;color:#fff}
+/* Apparition en cascade et survol */
+.reveal{opacity:0;transform:translateY(16px)}
+.reveal.in{opacity:1;transform:none;transition:opacity .5s ease-out,transform .5s ease-out}
+.article,.ech{transition:transform .2s,box-shadow .2s}
+.article:hover,.ech:hover{transform:translateY(-3px);box-shadow:var(--shadow-hover)}
+@media (prefers-reduced-motion: reduce){
+  .reveal{opacity:1;transform:none}
+  *,*::before,*::after{transition:none!important;animation:none!important}
+  .stat-top:hover,.article:hover,.ech:hover{transform:none}
+}
 
 /* En-tête */
-.header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;padding:8px 4px}
-.brand{display:flex;align-items:center;gap:16px;min-width:0}
+.nav .brand{padding:4px 6px 14px}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.logo{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;color:#fff;flex:none;background:linear-gradient(135deg,var(--accent),var(--accent-2))}
+[data-theme="video"] .logo{background:linear-gradient(135deg,#0f2540,#1490e8)}
 .brand-text{display:flex;flex-direction:column;gap:2px;min-width:0}
-.brand-title{font-size:26px;font-weight:700;letter-spacing:-.01em}
-.brand-sub{font-size:15px;color:var(--muted)}
+.brand-title{font-size:17px;font-weight:700;letter-spacing:-.01em}
+.brand-sub{font-size:12px;color:var(--muted)}
 .brand-sub.alerte{color:var(--warn);font-weight:600}
 .actions{display:flex;align-items:center;gap:6px;position:relative}
 .icon-btn{width:44px;height:44px;border-radius:var(--radius-sm);border:0;background:transparent;color:var(--text);display:flex;align-items:center;justify-content:center;position:relative}
-.icon-btn:hover{background:var(--card)}
+.icon-btn:hover{background:var(--accent-bg)}
 .icon-btn.petit{width:36px;height:36px}
 .icon-btn .pastille{position:absolute;top:6px;right:6px;min-width:17px;height:17px;border-radius:9px;background:var(--ko);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 4px}
-.avatar{width:44px;height:44px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-weight:700;font-size:16px;margin-left:6px}
-.menu{position:absolute;right:0;top:52px;z-index:10;background:var(--panel);border:1px solid var(--border);border-radius:var(--radius-md);padding:8px;min-width:230px;box-shadow:0 12px 40px rgba(0,0,0,.45);display:flex;flex-direction:column;gap:4px}
+.avatar{width:40px;height:40px;border-radius:50%;border:0;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;font-weight:700;font-size:16px;margin-left:6px}
+.menu{position:absolute;right:0;top:52px;z-index:10;background:var(--menu-bg);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--border);border-radius:var(--radius-md);padding:8px;min-width:230px;box-shadow:0 12px 40px rgba(0,0,0,.45);display:flex;flex-direction:column;gap:4px}
 .menu .info{font-size:13px;color:var(--muted);padding:6px 10px}
 .menu button{background:transparent;border:0;border-radius:10px;text-align:left;padding:10px;color:var(--nav-text)}
-.menu button:hover{background:var(--card)}
+.menu button:hover{background:var(--accent-bg)}
 .menu button.actif{color:var(--accent-soft);font-weight:600}
 .menu.alertes{width:min(360px,calc(100vw - 32px));gap:8px}
 .alerte-item{display:flex;flex-direction:column;gap:4px;background:var(--card);border:1px solid var(--border);border-left:4px solid var(--warn);border-radius:10px;padding:10px 12px}
@@ -104,31 +181,32 @@ svg{flex:none}
 .icon-btn.cloche-erreur{color:var(--ko)}
 
 /* Mise en page */
-.layout{display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start}
+
 
 /* Navigation */
-.nav{flex:1 1 230px;max-width:100%;background:var(--panel);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px 14px;display:flex;flex-direction:column;gap:4px;position:sticky;top:16px}
-.nav-title{font-size:13px;font-weight:700;padding:12px 8px 6px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.nav{padding:18px 14px;display:flex;flex-direction:column;gap:4px;position:sticky;top:20px;max-height:calc(100vh - 40px);overflow:auto;scrollbar-width:thin}
+.nav-title{font-size:11px;font-weight:600;padding:14px 10px 6px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
 .nav-title:first-child{padding-top:0}
-.cat{min-height:44px;border-radius:var(--radius-sm);border:0;padding:0 12px;display:flex;align-items:center;gap:12px;font-size:15px;text-align:left;background:transparent;color:var(--nav-text);font-weight:500}
-.cat:hover{background:var(--card)}
-.cat.is-active{background:var(--accent);color:#fff;font-weight:600}
+.cat{min-height:40px;border-radius:var(--radius-sm);border:0;padding:0 10px;display:flex;align-items:center;gap:10px;font-size:14px;text-align:left;background:transparent;color:var(--muted);font-weight:500;transition:background .2s,color .2s}
+.cat svg{width:18px;height:18px}
+.cat:hover{background:var(--accent-bg);color:var(--text)}
+.cat.is-active{background:var(--card);color:var(--text);font-weight:600;box-shadow:var(--shadow)}
 .cat .lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.cat .nb{font-size:12px;font-weight:700;background:var(--card-2);color:var(--accent-soft);border-radius:999px;padding:1px 8px}
-.cat.is-active .nb{background:rgba(255,255,255,.22);color:#fff}
+.cat .nb{font-size:11px;font-weight:600;background:var(--accent-bg);color:var(--accent-soft);border-radius:999px;padding:2px 7px}
+
 .cat .nb.urgent{background:var(--ko);color:#fff}
-.reset{margin-top:14px;height:44px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--card);color:var(--text);font-size:14px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:8px}
+.reset{margin-top:14px;height:40px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--input);color:var(--text);font-size:14px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:8px}
 
 /* Contenu */
-.main{flex:999 1 560px;min-width:0;background:var(--panel);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;display:flex;flex-direction:column;gap:12px}
+.main{min-width:0;padding:22px;display:flex;flex-direction:column;gap:12px}
 .list-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 8px 2px;flex-wrap:wrap}
-.list-title{font-size:15px;font-weight:600}
+.list-title{font-size:20px;font-weight:700;letter-spacing:-.01em}
 .list-count{font-size:13px;color:var(--muted)}
 .outils{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:0 4px}
 .outils input[type=search]{flex:1;min-width:180px}
-.puce{border:1px solid var(--border);background:var(--card);color:var(--nav-text);border-radius:999px;padding:6px 14px;font-size:13px;font-weight:500}
+.puce{border:1px solid var(--border);background:var(--input);color:var(--nav-text);border-radius:999px;padding:6px 14px;font-size:13px;font-weight:500}
 .puce:hover{border-color:var(--accent)}
-.puce.is-active{background:var(--accent);border-color:var(--accent);color:#fff}
+.puce.is-active{background:linear-gradient(135deg,var(--accent),var(--accent-2));border-color:transparent;color:#fff}
 .lien-btn{background:none;border:0;color:var(--accent-soft);font-size:13px;padding:6px}
 .check{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:6px}
 .bandeau{border-radius:var(--radius-md);padding:10px 14px;font-size:14px;font-weight:600}
@@ -137,12 +215,12 @@ svg{flex:none}
 .empty{padding:48px 16px;text-align:center;color:var(--muted);font-size:15px}
 
 /* Carte article */
-.article{display:flex;flex-direction:column;gap:10px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-md);padding:16px 14px 14px 20px}
+.article{display:flex;flex-direction:column;gap:10px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px}
 .article.is-read .article-title{color:var(--nav-text);font-weight:600}
 .article-row{display:flex;gap:18px;align-items:stretch}
 .article-body{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:6px;padding-top:2px}
-.article-title{font-size:18px;font-weight:700;line-height:1.3;color:var(--text);text-decoration:none}
-.article-title:hover{color:#D9CFFF}
+.article-title{font-size:15.5px;font-weight:600;line-height:1.3;color:var(--text);text-decoration:none}
+.article-title:hover{color:var(--accent-soft)}
 .article-summary{margin:0;font-size:14px;line-height:1.5;color:var(--muted)}
 .article-cat{font-size:12px;font-weight:600;color:var(--accent-soft);display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center}
 .article-cat .doux{color:var(--muted);font-weight:500}
@@ -152,20 +230,20 @@ svg{flex:none}
 .dot{width:9px;height:9px;border-radius:50%;background:transparent}
 .dot.is-unread{background:var(--accent)}
 .side-btns{display:flex;gap:2px}
-.save.is-saved{color:var(--accent-soft)}
+.save.is-saved{color:#f59e0b}
 .save.is-saved svg{fill:currentColor}
 .note{font-size:13px;color:var(--nav-text);background:var(--card-2);border-radius:10px;padding:8px 10px;white-space:pre-wrap}
 .panneau{border-top:1px solid var(--border);padding-top:12px;display:flex;flex-direction:column;gap:10px}
 .panneau .ligne{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .btn{border:1px solid var(--border);background:var(--card-2);color:var(--text);border-radius:10px;padding:8px 14px;font-size:14px;font-weight:500}
 .btn:hover{border-color:var(--accent)}
-.btn.primaire{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primaire{background:linear-gradient(135deg,var(--accent),var(--accent-2));border-color:transparent;color:#fff}
 .btn.danger{color:var(--ko)}
 .btn.danger:hover{border-color:var(--ko)}
 .badge{display:inline-block;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:700;background:var(--card-2);color:var(--muted)}
 .b-ok{background:var(--ok-f);color:var(--ok)} .b-warn{background:var(--warn-f);color:var(--warn)}
 .b-ko{background:var(--ko-f);color:var(--ko)} .b-info{background:var(--info-f);color:var(--info)}
-.b-accent{background:rgba(124,92,255,.18);color:var(--accent-soft)}
+.b-accent{background:var(--accent-bg);color:var(--accent-soft)}
 .etoiles{color:var(--warn);letter-spacing:-1px}
 
 /* Aides */
@@ -211,38 +289,51 @@ dt{color:var(--muted)} dd{margin:0;white-space:pre-wrap}
 .pre{white-space:pre-wrap}
 
 /* Connexion */
-.connexion{max-width:400px;margin:10vh auto 0;background:var(--panel);border:1px solid var(--border);border-radius:var(--radius-lg);padding:28px;display:flex;flex-direction:column;gap:12px}
+.connexion{max-width:400px;margin:10vh auto 0;background:var(--panel);border:1px solid var(--border);border-radius:var(--radius-lg);backdrop-filter:blur(16px) saturate(140%);-webkit-backdrop-filter:blur(16px) saturate(140%);box-shadow:var(--shadow);padding:28px;display:flex;flex-direction:column;gap:12px}
 .connexion .brand{margin-bottom:8px}
 .connexion input,.connexion select{width:100%}
 .connexion .btn{width:100%;height:46px}
 .erreur{color:var(--ko);font-size:14px}
 
-.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--accent);color:#fff;
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%);background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;
   padding:10px 18px;border-radius:999px;font-size:14px;font-weight:600;z-index:30;opacity:0;transition:opacity .2s;pointer-events:none;box-shadow:0 8px 30px rgba(0,0,0,.4)}
 .toast.vu{opacity:1}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 
 /* Mobile : la navigation devient une bande défilante */
+@media (max-width:1100px){ .stats-top{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (max-width:860px){
+  .page{padding:12px}
+  .app{grid-template-columns:minmax(0,1fr);gap:14px}
+  .colonne{gap:14px}
+  .nav{position:sticky;top:0;z-index:5;flex-direction:row;overflow-x:auto;max-height:none;padding:8px;gap:6px;border-radius:var(--radius-md);scrollbar-width:none}
+  .nav::-webkit-scrollbar{display:none}
+  .nav-title,.reset,.nav .brand{display:none}
+  .topbar{flex-wrap:wrap}
+  body{background-attachment:scroll}
+  .marque-mobile{display:flex;align-items:center;gap:8px;font-weight:700;margin-right:auto;order:1}
+  .marque-mobile .logo{width:30px;height:30px;border-radius:9px}
+  .topbar .actions{order:2}
+  .switcher{order:3;flex:1 1 100%;justify-content:space-between}
+  .switcher button{flex:1;padding:6px 9px;font-size:12px}
+  .search{order:4;flex-basis:100%}
+}
 @media (max-width:760px){
-  .page{padding:14px}
-  .wrap{gap:14px}
-  .header{flex-wrap:nowrap;gap:8px;padding:4px 0}
-  .brand{gap:10px}
-  .brand-title{font-size:18px;white-space:nowrap} .brand-sub{font-size:12px}
-  .brand svg{width:32px;height:32px}
   .actions{gap:0}
   .icon-btn{width:38px;height:38px}
-  .avatar{width:36px;height:36px;font-size:14px;margin-left:4px}
-  .nav{position:sticky;top:0;z-index:5;flex-direction:row;overflow-x:auto;padding:8px;gap:6px;border-radius:var(--radius-md);scrollbar-width:none;flex-basis:100%}
-  .nav::-webkit-scrollbar{display:none}
-  .nav-title,.reset{display:none}
+  .avatar{width:34px;height:34px;font-size:14px;margin-left:2px}
   .cat{flex:none;min-height:40px;padding:0 12px;gap:8px;font-size:14px}
   .cat .lbl{overflow:visible}
-  .main{padding:10px;border-radius:var(--radius-md)}
+  .main{padding:12px;border-radius:var(--radius-md)}
+  .list-title{font-size:17px}
   .article{padding:14px}
   .article-row{gap:10px}
   .article-title{font-size:16px}
   .stats{grid-template-columns:repeat(3,1fr);gap:8px}
+  .stats-top{gap:10px}
+  .stat-top{padding:14px} .stat-value{font-size:22px} .stat-head{margin-bottom:8px}
+  .stat-icon{width:32px;height:32px}
+  .switcher button{padding:6px 7px}
   .stat{padding:10px}
   .stat b{font-size:22px}
   .stat span{font-size:12px}
@@ -271,7 +362,17 @@ const store = {
 // ------------------------------------------------------------------ icônes (SVG inline)
 const I = (d, w = 20, extra = '') => `<svg width="${w}" height="${w}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" ${extra}>${d}</svg>`;
 const ICO = {
-  logo: `<svg width="44" height="44" viewBox="0 0 44 44" role="img" aria-label="Logo Veille"><path d="M22 4 40 40H30L22 22 14 40H4Z" fill="var(--accent)"/><path d="M22 22 30 40H14Z" fill="var(--accent-soft)"/></svg>`,
+  logo: `<span class="logo" role="img" aria-label="Logo Veille">${I('<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>', 18, 'stroke-width="2"')}</span>`,
+  star: I('<path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/>'),
+  news: I('<path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2zm0 0a2 2 0 0 1-2-2v-9h4"/><path d="M10 6h8M10 10h8M10 14h5"/>'),
+  mail: I('<rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 6L2 7"/>'),
+  fisc: I('<path d="M4 2h16v20l-3-2-3 2-3-2-3 2-4-2z"/><path d="M8 7h8M8 11h8M8 15h5"/>'),
+  users: I('<circle cx="9" cy="7" r="4"/><path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"/><path d="M16 3.1a4 4 0 0 1 0 7.8M22 21v-2a4 4 0 0 0-3-3.9"/>'),
+  scale: I('<path d="M12 3v18M5 21h14M3 7h18"/><path d="M6 7l-3 7a3 3 0 0 0 6 0zM18 7l-3 7a3 3 0 0 0 6 0z"/>'),
+  sprout: I('<path d="M7 20h10M12 20v-8"/><path d="M12 12c0-4-3-6-7-6 0 4 3 6 7 6zM12 12c0-3 2-6 7-6 0 4-3 6-7 6z"/>'),
+  chart: I('<path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/>'),
+  tool: I('<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/>'),
+  sun: I('<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'),
   search: I('<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>', 22, 'stroke-width="2"'),
   bell: I('<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/>', 22, 'stroke-width="2"'),
   refresh: I('<path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/>', 22, 'stroke-width="2"'),
@@ -431,6 +532,71 @@ const periodesOuvertes = () => S.data.aides.flatMap(a => (a.aides_periodes || []
 const periodesUrgentes = () => periodesOuvertes().filter(p => p.depot_cloture && joursJusqua(p.depot_cloture) <= CFG.alerteClotureJours);
 const aideAncienne = a => !a.verifie_le || (Date.now() - new Date(a.verifie_le)) > CFG.alerteVerificationJours * 86400000;
 
+// ------------------------------------------------------------------ icône et couleur d'une rubrique
+function styleTheme(nom){
+  const n = norm(nom);
+  if (/secheresse|canicule|calamit/.test(n)) return { ico: ICO.sun, cls: 'c-sun' };
+  if (/calendrier/.test(n)) return { ico: ICO.calendar, cls: 'c-agri' };
+  if (/fiscal|impot|tva/.test(n)) return { ico: ICO.fisc, cls: 'c-fisc' };
+  if (/social|tns|urssaf|msa/.test(n)) return { ico: ICO.users, cls: 'c-soc' };
+  if (/juridique|societe|immobilier/.test(n)) return { ico: ICO.scale, cls: 'c-jur' };
+  if (/filiere|elevage|marche/.test(n)) return { ico: ICO.chart, cls: 'c-eco' };
+  if (/echeance|chiffre/.test(n)) return { ico: ICO.clock, cls: 'c-compta' };
+  if (/artisan|commerce|liberau/.test(n)) return { ico: ICO.tool, cls: 'c-tech' };
+  if (/pac|aide|agricult/.test(n)) return { ico: ICO.sprout, cls: 'c-agri' };
+  return { ico: ICO.theme, cls: 'c-tech' };
+}
+
+// ------------------------------------------------------------------ cartes de statistiques (vraies valeurs)
+function renderStats(){
+  const d = S.data, j = d.journal[0];
+  const depuis = Date.now() - 86400000;
+  const duJour = d.articles.filter(a => new Date(a.created_at).getTime() >= depuis).length;
+  const nonLus = d.articles.filter(a => !a.lu).length;
+  const ouvertes = d.aides.filter(a => statutAide(a) === 'ouverte').length;
+  const urg = periodesUrgentes().length;
+  const ech7 = toutesEcheances(7).length, ech30 = toutesEcheances(30).length;
+  const carte = (titre, ico, cls, val, sous, sousCls, act, v) =>
+    `<button type="button" class="stat-top glass reveal" data-action="${act}" data-v="${v}">
+      <span class="stat-head"><span class="stat-title">${titre}</span><span class="stat-icon ${cls}">${ico}</span></span>
+      <span class="stat-value" data-to="${val}">${S.compter ? 0 : val}</span>
+      <span class="stat-change ${sousCls}">${sous}</span>
+    </button>`;
+  return `<section class="stats-top" aria-label="Statistiques">
+    ${carte('Articles du jour', ICO.news, 'c-fisc', duJour, j ? `Collecte ${esc(ilYa(j.debut))}` : 'Aucune collecte', duJour ? 'bon' : '', 'stat-vue', 'actus')}
+    ${carte('Non lus', ICO.mail, 'c-soc', nonLus, nonLus ? 'à traiter' : 'tout est lu', nonLus ? '' : 'bon', 'stat-vue', 'nonlus')}
+    ${carte('Aides ouvertes', ICO.sprout, 'c-agri', ouvertes, urg ? `${urg} clôture${urg > 1 ? 's' : ''} sous ${CFG.alerteClotureJours} j` : 'aucune clôture proche', urg ? 'alerte' : 'bon', 'stat-vue', 'aides')}
+    ${carte('Échéances à 7 jours', ICO.clock, 'c-jur', ech7, `${ech30} sur 30 jours`, ech7 ? 'alerte' : '', 'stat-vue', 'echeances')}
+  </section>`;
+}
+
+// ------------------------------------------------------------------ animations (apparition en cascade, compteurs)
+const mouvementReduit = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+function animer(){
+  const els = [...document.querySelectorAll('.reveal:not(.in)')];
+  if (mouvementReduit()) els.forEach(el => el.classList.add('in'));
+  else els.forEach((el, i) => setTimeout(() => el.classList.add('in'), 60 + Math.min(i, 14) * 55));
+  if (S.compter){
+    S.compter = false;
+    document.querySelectorAll('.stat-value[data-to]').forEach(el => {
+      const fin = +el.dataset.to;
+      if (mouvementReduit() || !fin){ el.textContent = fin; return; }
+      const t0 = performance.now(), duree = 1100;
+      (function pas(t){ const p = Math.min((t - t0) / duree, 1), e = 1 - Math.pow(1 - p, 3);
+        el.textContent = Math.round(fin * e); if (p < 1) requestAnimationFrame(pas); })(t0);
+    });
+  }
+}
+function revelerListe(){
+  const c = document.getElementById('contenu'); if (!c) return;
+  c.querySelectorAll(':scope > .article, :scope > .ech-liste > .ech, :scope > .stats, :scope > .periodes, :scope > .cal-wrap').forEach(el => el.classList.add('reveal'));
+}
+const STYLES = [['clair', 'Clair'], ['sombre', 'Sombre'], ['video', 'Style vidéo']];
+function appliquerStyle(t){
+  document.documentElement.dataset.theme = t; store.setItem('veille.style', t);
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', t === 'sombre' ? '#0b1024' : t === 'video' ? '#0e7fd6' : '#6a4be0');
+}
+
 // ------------------------------------------------------------------ alertes (cloche)
 // Erreur signalée par la dernière collecte (non encore vue), collecte manquante, clôtures proches.
 function alertes(){
@@ -467,16 +633,22 @@ function render(){
   const nbNotif = nbAlertes(), erreurNouvelle = alertes().some(a => a.cle !== 'cloture' && a.nouvelle);
   const initiale = (S.user.email || '?').charAt(0).toUpperCase();
 
-  $app.innerHTML = `<div class="page"><div class="wrap">
-    <header class="header">
-      <div class="brand">${ICO.logo}
+  const style = document.documentElement.dataset.theme || 'clair';
+  $app.innerHTML = `<div class="page"><div class="app">
+    ${renderNav(`<div class="brand">${ICO.logo}
         <div class="brand-text">
           <span class="brand-title">${esc(v.nom)}</span>
-          <span class="brand-sub ${vieille ? 'alerte' : ''}">${vieille ? '⚠ ' : ''}Dernière collecte IA ${esc(ilYa(derniere))}</span>
+          <span class="brand-sub ${vieille ? 'alerte' : ''}">${vieille ? '⚠ ' : ''}Collecte IA ${esc(ilYa(derniere))}</span>
         </div>
-      </div>
+      </div>`)}
+    <div class="colonne">
+    <header class="topbar glass reveal">
+      <span class="marque-mobile">${ICO.logo}${esc(v.nom)}</span>
+      <label class="search">${ICO.search}
+        <input type="search" data-input="q" value="${esc(S.f.q)}" placeholder="Rechercher un article, une aide, un mot-clé…" aria-label="Rechercher"><kbd>/</kbd>
+      </label>
+      <div class="switcher" role="group" aria-label="Choix du style">${STYLES.map(([k, l]) => `<button type="button" data-action="style" data-v="${k}" class="${style === k ? 'on' : ''}" aria-pressed="${style === k}">${l}</button>`).join('')}</div>
       <div class="actions">
-        <button type="button" class="icon-btn" data-action="recherche" aria-label="Rechercher">${ICO.search}</button>
         <button type="button" class="icon-btn ${erreurNouvelle ? 'cloche-erreur' : ''}" data-action="alertes" aria-label="Notifications${nbNotif ? ` (${nbNotif})` : ''}" aria-expanded="${S.alertes}">${ICO.bell}${nbNotif ? `<span class="pastille">${erreurNouvelle ? '!' : nbNotif}</span>` : ''}</button>
         ${S.alertes ? renderAlertes() : ''}
         <button type="button" class="icon-btn" data-action="rafraichir" aria-label="Recharger">${ICO.refresh}</button>
@@ -488,14 +660,16 @@ function render(){
         </div>` : ''}
       </div>
     </header>
-    <div class="layout">
-      ${renderNav()}
-      <main class="main" id="contenu">${S.chargement ? '<div class="empty">Chargement…</div>' : contenu()}</main>
+    ${renderStats()}
+    <main class="main glass reveal" id="contenu">${S.chargement ? '<div class="empty">Chargement…</div>' : contenu()}</main>
     </div>
   </div></div>`;
+  if (S.animer){ S.animer = false; revelerListe(); }
+  else document.querySelectorAll('.reveal').forEach(el => el.classList.add('in'));
+  animer();
 }
 
-function renderNav(){
+function renderNav(marque = ''){
   const d = S.data;
   const nonLus = d.articles.filter(a => !a.lu);
   const ouvertes = d.aides.filter(a => statutAide(a) === 'ouverte').length;
@@ -504,7 +678,8 @@ function renderNav(){
   const nb = (n, cls = '') => n ? `<span class="nb ${cls}">${n}</span>` : '';
   const cat = (vue, ico, lbl, n, theme = '') =>
     `<button type="button" class="cat ${actif(vue, theme)}" data-action="vue" data-v="${vue}" data-theme="${esc(theme)}" aria-pressed="${!!actif(vue, theme)}">${ico}<span class="lbl">${esc(lbl)}</span>${n}</button>`;
-  return `<nav class="nav" aria-label="Navigation">
+  return `<nav class="nav glass reveal" aria-label="Navigation">
+    ${marque}
     <span class="nav-title">Suivi</span>
     ${cat('accueil', ICO.home, 'Accueil', nb(nbAlertes(), nbAlertes() ? 'urgent' : ''))}
     ${cat('aides', ICO.aide, 'Aides', nb(urgentes || ouvertes, urgentes ? 'urgent' : ''))}
@@ -512,8 +687,8 @@ function renderNav(){
     ${cat('cultures', ICO.calendar, 'Calendrier des cultures', '')}
     <span class="nav-title">Actualités</span>
     ${cat('actus', ICO.grid, 'Toutes', nb(nonLus.length))}
-    ${d.themes.filter(t => t.actif).map(t => cat('actus', ICO.theme, t.nom, nb(nonLus.filter(a => a.theme_id === t.id).length), t.id)).join('')}
-    ${cat('conservees', ICO.bookmark, 'Conservées', nb(d.articles.filter(a => a.conserver).length))}
+    ${d.themes.filter(t => t.actif).map(t => cat('actus', styleTheme(t.nom).ico, t.nom, nb(nonLus.filter(a => a.theme_id === t.id).length), t.id)).join('')}
+    ${cat('conservees', ICO.star, 'Favoris', nb(d.articles.filter(a => a.conserver).length))}
     <span class="nav-title">Réglages</span>
     ${cat('themes', ICO.sliders, 'Thèmes & consignes', '')}
     ${cat('journal', ICO.journal, 'Journal de l’IA', '')}
@@ -536,7 +711,7 @@ function contenu(){
   }
 }
 function majContenu(){ const c = document.getElementById('contenu'); if (c) c.innerHTML = contenu(); }
-const champRecherche = ph => (S.recherche || S.f.q) ? `<input type="search" placeholder="${ph}" value="${esc(S.f.q)}" data-input="q" aria-label="Rechercher">` : '';
+const champRecherche = () => ''; // la recherche est dans la barre du haut
 const tete = (titre, compte) => `<div class="list-head"><span class="list-title">${esc(titre)}</span><span class="list-count">${compte}</span></div>`;
 
 // ------------------------------------------------------------------ échéances fiscales récurrentes
@@ -794,15 +969,16 @@ function vueArticles(conservees){
     (conservees || !S.f.nonLus || !a.lu) &&
     (!q || norm([a.titre, a.resume, a.source, a.notes, (a.tags || []).join(' ')].join(' ')).includes(q))
   );
-  const titre = conservees ? 'Actualités conservées' : S.f.theme ? (nomTheme[S.f.theme] || 'Thème') : 'Toutes les actualités';
+  const titre = conservees ? 'Favoris' : S.f.theme ? (nomTheme[S.f.theme] || 'Thème') : 'Dernières actualités';
+  const onglet = conservees ? 'favoris' : S.f.nonLus ? 'nonlus' : 'tout';
   const nonLus = liste.filter(a => !a.lu).length;
   return `${tete(titre, pluriel(liste.length, 'article', 'articles') + (nonLus && !conservees ? ` · ${nonLus} non lu${nonLus > 1 ? 's' : ''}` : ''))}
-    <div class="outils">${champRecherche('Rechercher une actualité…')}
-      ${conservees ? '' : `<button type="button" class="puce ${S.f.nonLus ? 'is-active' : ''}" data-action="nonlus">Non lues</button>
-      ${nonLus ? '<button type="button" class="lien-btn" data-action="tout-lu">Tout marquer lu</button>' : ''}`}
+    <div class="outils">
+      <div class="tabs" role="tablist">${[['tout', 'Tout'], ['nonlus', 'Non lus'], ['favoris', 'Favoris']].map(([k, l]) => `<button type="button" role="tab" class="tab ${onglet === k ? 'on' : ''}" aria-selected="${onglet === k}" data-action="onglet" data-v="${k}">${l}</button>`).join('')}</div>
+      ${!conservees && nonLus ? '<button type="button" class="lien-btn" data-action="tout-lu">Tout marquer lu</button>' : ''}
     </div>
     ${liste.length ? liste.map(a => carteArticle(a, nomTheme)).join('')
-      : `<div class="empty">${conservees ? 'Aucune actualité conservée. Utilise le marque-page pour en garder une.' : 'Aucun article dans cette catégorie pour le moment.'}</div>`}`;
+      : `<div class="empty">${conservees ? 'Aucun favori. Utilise l’étoile pour garder une actualité sans limite de durée.' : 'Aucun article pour ce filtre.'}</div>`}`;
 }
 function carteArticle(a, nomTheme){
   const purge = ajouterJours(a.created_at, CFG.joursAvantPurge);
@@ -812,8 +988,10 @@ function carteArticle(a, nomTheme){
     : `Suppression automatique ${n <= 0 ? 'cette nuit' : `dans ${n} j`}`;
   const echeanceProche = a.date_fin && joursJusqua(a.date_fin) >= 0 && joursJusqua(a.date_fin) <= CFG.alerteClotureJours;
   const idp = 'art-' + a.id;
+  const st = styleTheme(nomTheme[a.theme_id] || '');
   return `<article class="article ${a.lu ? 'is-read' : ''}">
     <div class="article-row">
+      <span class="cat-icon ${st.cls}" aria-hidden="true">${st.ico}</span>
       <div class="article-body">
         <a class="article-title" href="${urlSure(a.url)}" target="_blank" rel="noopener" data-action="ouvrir" data-id="${esc(a.id)}">${esc(a.titre)}</a>
         ${a.resume ? `<p class="article-summary">${esc(a.resume)}</p>` : ''}
@@ -832,7 +1010,7 @@ function carteArticle(a, nomTheme){
           <span class="dot ${a.lu ? '' : 'is-unread'}">${a.lu ? '' : '<span class="sr-only">Non lu</span>'}</span>
         </div>
         <div class="side-btns">
-          <button type="button" class="icon-btn petit save ${a.conserver ? 'is-saved' : ''}" data-action="conserver" data-id="${esc(a.id)}" aria-pressed="${a.conserver}" aria-label="${a.conserver ? 'Ne plus conserver' : 'Conserver sans limite'}" title="${a.conserver ? 'Ne plus conserver' : 'Conserver sans limite'}">${ICO.bookmark}</button>
+          <button type="button" class="icon-btn petit save ${a.conserver ? 'is-saved' : ''}" data-action="conserver" data-id="${esc(a.id)}" aria-pressed="${a.conserver}" aria-label="${a.conserver ? 'Retirer des favoris' : 'Ajouter aux favoris (gardé sans limite)'}" title="${a.conserver ? 'Retirer des favoris' : 'Ajouter aux favoris (gardé sans limite)'}">${ICO.star}</button>
           <button type="button" class="icon-btn petit" data-action="plus" data-id="${esc(a.id)}" aria-expanded="${S.ouverts.has(idp)}" aria-label="Plus d'actions" title="Plus d'actions">${ICO.more}</button>
         </div>
       </div>
@@ -925,7 +1103,7 @@ async function majArticleLocal(id, patch, msg){
 }
 function allerA(vue, theme = ''){
   S.vue = vue; S.f.theme = theme; store.setItem('veille.vue', vue);
-  render();
+  S.animer = true; render();
   if (window.innerWidth <= 760) document.getElementById('contenu')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
   else window.scrollTo(0, 0);
 }
@@ -938,6 +1116,19 @@ document.addEventListener('click', async e => {
   const id = el.dataset.id, A = el.dataset.action;
   switch (A){
     case 'vue': allerA(el.dataset.v, el.dataset.theme || ''); break;
+    case 'style': appliquerStyle(el.dataset.v); render(); break;
+    case 'onglet': {
+      const t = el.dataset.v, theme = S.vue === 'actus' ? S.f.theme : '';
+      if (t === 'favoris') allerA('conservees');
+      else { S.f.nonLus = t === 'nonlus'; allerA('actus', theme); }
+      break;
+    }
+    case 'stat-vue': {
+      const v = el.dataset.v;
+      if (v === 'nonlus') { S.f.nonLus = true; allerA('actus'); }
+      else { if (v === 'actus') S.f.nonLus = false; if (v === 'aides') S.f.aides = 'ouvertes'; allerA(v); }
+      break;
+    }
     case 'reset': S.f = { q: '', theme: '', nonLus: false, aides: 'actives' }; S.recherche = false; allerA(S.vue === 'conservees' ? 'actus' : S.vue); break;
     case 'recherche':
       S.recherche = !S.recherche; if (!S.recherche) S.f.q = '';
@@ -963,7 +1154,7 @@ document.addEventListener('click', async e => {
     case 'ouvrir': if (!art(id).lu) setTimeout(() => majArticleLocal(id, { lu: true }), 0); break; // le lien s'ouvre normalement
     case 'plus': { const k = 'art-' + id; S.ouverts.has(k) ? S.ouverts.delete(k) : S.ouverts.add(k); majContenu(); break; }
     case 'lu': majArticleLocal(id, { lu: !art(id).lu }); break;
-    case 'conserver': majArticleLocal(id, { conserver: !art(id).conserver }, art(id).conserver ? 'Retirée des conservées' : 'Conservée sans limite'); break;
+    case 'conserver': majArticleLocal(id, { conserver: !art(id).conserver }, art(id).conserver ? 'Retirée des favoris' : 'Ajoutée aux favoris'); break;
     case 'tout-lu': {
       const ids = S.data.articles.filter(a => !a.lu && (!S.f.theme || a.theme_id === S.f.theme)).map(a => a.id);
       ids.forEach(i => art(i).lu = true); render();
@@ -1011,7 +1202,8 @@ document.addEventListener('input', e => {
   if (e.target.dataset.input !== 'q') return;
   S.f.q = e.target.value;
   const pos = e.target.selectionStart;
-  majContenu();
+  if (!['aides', 'actus', 'conservees'].includes(S.vue)) { S.vue = 'actus'; S.f.theme = ''; store.setItem('veille.vue', 'actus'); render(); }
+  else majContenu();
   const nouv = document.querySelector('[data-input="q"]');
   if (nouv) { nouv.focus(); nouv.setSelectionRange(pos, pos); }
 });
@@ -1021,7 +1213,11 @@ document.addEventListener('toggle', e => {
   d.open ? S.ouverts.add(d.dataset.id) : S.ouverts.delete(d.dataset.id);
 }, true);
 
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && (S.menu || S.alertes)) { S.menu = false; S.alertes = false; render(); } });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && (S.menu || S.alertes)) { S.menu = false; S.alertes = false; render(); }
+  const q = document.querySelector('[data-input="q"]');
+  if (e.key === '/' && q && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || '')) { e.preventDefault(); q.focus(); }
+});
 
 document.addEventListener('submit', async e => {
   if (e.target.dataset.form !== 'connexion') return;
@@ -1046,6 +1242,7 @@ async function charger(){
       (/permission|policy|JWT/i.test(e.message || '') ? " — vérifie que ton e-mail est dans la table utilisateurs_autorises." : '');
   }
   S.chargement = false;
+  S.animer = true; S.compter = true;
   render();
 }
 
